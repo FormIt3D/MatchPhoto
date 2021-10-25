@@ -36,10 +36,12 @@ MatchPhoto.updatePhotoToMatchCamera = async function()
 {
 
     let nHistoryID = await FormIt.GroupEdit.GetEditingHistoryID();
-
     let cameraData = await FormIt.Cameras.GetCameraData();
+    
+    let viewportSize = await FormIt.Cameras.GetViewportSize();
+    let aspectRatio = viewportSize.width / viewportSize.height;
 
-    ManageCameras.createCameraGeometryFromCameraData(nHistoryID, cameraData, 0) /* use current camera aspect ratio */
+    ManageCameras.createCameraGeometryFromCameraData(nHistoryID, cameraData, aspectRatio);
 }
 
 
