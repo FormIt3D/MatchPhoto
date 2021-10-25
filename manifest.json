@@ -1,0 +1,8 @@
+{
+    "PluginName": "Match Photo",
+    "PluginDescription": "Match a photo to the 3D scene.",
+    "PluginType": "Panel",
+    "Scripts": [],
+    "Panel": "PLUGINLOCATION/index.html",
+    "PanelIcon": "PLUGINLOCATION/img/fillet_2d_corners@2x.png"
+}
