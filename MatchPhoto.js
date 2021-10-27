@@ -2,10 +2,6 @@ window.MatchPhoto = window.MatchPhoto || {};
 
 /*** web/UI code - runs natively in the plugin process ***/
 
-// IDs of input elements that need to be referenced or updated
-const filletRadiusInputID = 'filletRadiusInput';
-const deleteVertexInputID = 'deleteVertexInput';
-
 // initialize the UI
 MatchPhoto.initializeUI = async function()
 {
@@ -32,16 +28,42 @@ MatchPhoto.updateUI = async function()
 
 /*** application code - runs asynchronously from plugin process to communicate with FormIt ***/
 
-MatchPhoto.updatePhotoToMatchCamera = async function()
+MatchPhoto.stringAttributeKey = 'FormIt::Plugins::MatchPhoto';
+
+MatchPhoto.updatePhotoObjectToMatchCamera = async function()
 {
+    let nEditingHistoryID = await FormIt.GroupEdit.GetEditingHistoryID();
 
-    let nHistoryID = await FormIt.GroupEdit.GetEditingHistoryID();
-    let cameraData = await FormIt.Cameras.GetCameraData();
+    // first, check if a match photo object already exists in this history
+    let stringAttributeResult = await FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(nEditingHistoryID, MatchPhoto.stringAttributeKey);
+    let bMatchPhotoObjectExists = stringAttributeResult.length > 0;
+
+    // if the match photo object exists, move it to face the camera
+    if (bMatchPhotoObjectExists)
+    {
+        let matchPhotoObjectInstanceID = stringAttributeResult[0];
+        let matchPhotoObjectHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nEditingHistoryID, matchPhotoObjectInstanceID);
+
+        // get the LCS of the photo object history ID
+        let matchPhotoObjectLCS = await WSM.APIGetLocalCoordinateSystemReadOnly(matchPhotoObjectHistoryID);
+
+        console.log("Match photo object LCS: " + JSON.stringify(matchPhotoObjectLCS) + " Current camera data: " + JSON.stringify(await FormIt.Cameras.GetCameraData()));
+
+    }
+    // otherwise, make it from scratch
+    else
+    {
+        let cameraData = await FormIt.Cameras.GetCameraData();
     
-    let viewportSize = await FormIt.Cameras.GetViewportSize();
-    let aspectRatio = viewportSize.width / viewportSize.height;
+        let viewportSize = await FormIt.Cameras.GetViewportSize();
+        let aspectRatio = viewportSize.width / viewportSize.height;
+    
+        let matchPhotoObjectInstanceID = await ManageCameras.createCameraGeometryFromCameraData(nEditingHistoryID, cameraData, aspectRatio);
 
-    ManageCameras.createCameraGeometryFromCameraData(nHistoryID, cameraData, aspectRatio);
+        await WSM.Utils.SetOrCreateStringAttributeForObject(nEditingHistoryID,
+            matchPhotoObjectInstanceID, MatchPhoto.stringAttributeKey, "Test!");
+    }
+
 }
 
 

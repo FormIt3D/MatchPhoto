@@ -20,7 +20,7 @@
             // subscribe to the message sent when a camera operation ends
             FormItInterface.SubscribeMessage("FormIt.Message.kCameraOperationEnded", async function(msg)
             {
-                await MatchPhoto.updatePhotoToMatchCamera();
+                await MatchPhoto.updatePhotoObjectToMatchCamera();
             });
 
             // initialize the UI
