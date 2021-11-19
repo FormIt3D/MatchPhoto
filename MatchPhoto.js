@@ -35,20 +35,37 @@ MatchPhoto.updatePhotoObjectToMatchCamera = async function()
     let nEditingHistoryID = await FormIt.GroupEdit.GetEditingHistoryID();
 
     // first, check if a match photo object already exists in this history
-    let stringAttributeResult = await FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(nEditingHistoryID, MatchPhoto.stringAttributeKey);
-    let bMatchPhotoObjectExists = stringAttributeResult.length > 0;
+    let aInstancesWithStringAttribute = await FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(nEditingHistoryID, MatchPhoto.stringAttributeKey);
+    let bMatchPhotoObjectExists = aInstancesWithStringAttribute.length > 0;
 
     // if the match photo object exists, move it to face the camera
     if (bMatchPhotoObjectExists)
     {
-        let matchPhotoObjectInstanceID = stringAttributeResult[0];
-        let matchPhotoObjectHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nEditingHistoryID, matchPhotoObjectInstanceID);
+        let cameraObjectInstanceID = aInstancesWithStringAttribute[0];
+        let cameraObjectHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nEditingHistoryID, cameraObjectInstanceID);
+        let cameraObjectInstanceTransf3d = await WSM.APIGetInstanceTransf3dReadOnly(nEditingHistoryID, cameraObjectInstanceID);
 
-        // get the LCS of the photo object history ID
-        let matchPhotoObjectLCS = await WSM.APIGetLocalCoordinateSystemReadOnly(matchPhotoObjectHistoryID);
+        // re-create the instance transform without any scaling
+        let cameraObjectCoordinateSystem = await WSM.Transf3d.GetCoordinateSystem(cameraObjectInstanceTransf3d);
+        let xDirNormalized = await WSM.Vector3d.GetNormalized(cameraObjectCoordinateSystem.xDir);
+        let yDirNormalized = await WSM.Vector3d.GetNormalized(cameraObjectCoordinateSystem.yDir);
+        let newInstanceTransform = await WSM.Transf3d.Transf3d(cameraObjectCoordinateSystem.origin, xDirNormalized, yDirNormalized);
 
-        console.log("Match photo object LCS: " + JSON.stringify(matchPhotoObjectLCS) + " Current camera data: " + JSON.stringify(await FormIt.Cameras.GetCameraData()));
+        let cameraObjectInvertedTransform = await WSM.Geom.InvertTransform(newInstanceTransform);
 
+        // get camera data
+        let cameraForward = await FormIt.Cameras.GetCameraWorldForward();
+        let cameraUp = await FormIt.Cameras.GetCameraWorldUp();
+        let cameraPosition = await FormIt.Cameras.GetCameraWorldPosition();
+        let cameraRight = await WSM.Vector3d.CrossProduct(cameraForward, cameraUp);
+        cameraUp = await WSM.Vector3d.MultiplyByFactor(cameraUp, -1);
+        let cameraTransform = await WSM.Transf3d.Transf3d(cameraPosition, cameraRight, cameraUp);
+
+        // calculate the transform to get to the current camera
+        let finalTransform = await WSM.Transf3d.Multiply(cameraTransform, cameraObjectInvertedTransform);
+
+        // apply the transform to the camera object
+        await WSM.APITransformObject(nEditingHistoryID, cameraObjectInstanceID, finalTransform);	
     }
     // otherwise, make it from scratch
     else
