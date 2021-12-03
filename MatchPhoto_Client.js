@@ -3,6 +3,7 @@ var MatchPhoto = MatchPhoto || {};
 /*** application code - runs asynchronously from plugin process to communicate with FormIt ***/
 
 MatchPhoto.stringAttributeKey = 'FormIt::Plugins::MatchPhoto';
+MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
 
 MatchPhoto.updatePhotoObjectToMatchCamera = function()
 {
@@ -55,12 +56,13 @@ MatchPhoto.updatePhotoObjectToMatchCamera = function()
             matchPhotoObjectInstanceID, MatchPhoto.stringAttributeKey, "Test!");
 
         //put the instance on a layer and lock the layer
-        
+        FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
+        var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
+        FormIt.Layers.SetLayerPickable(layerID, false);
+        FormIt.Layers.AssignLayerToObjects(layerID, matchPhotoObjectInstanceID);
     }
 
 }
-
-
 
 // set up the message listener
 MessagesPluginListener = {};

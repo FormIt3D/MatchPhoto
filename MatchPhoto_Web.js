@@ -27,6 +27,9 @@ MatchPhoto.initializeUI = function()
     contentContainer.appendChild(enabledCheckbox.element);
     document.getElementById(MatchPhoto.enabledCheckboxID).checked = false;
     document.getElementById(MatchPhoto.enabledCheckboxID).onclick = MatchPhoto.toggleSubscribeToCameraChangedMessage;
+
+    // create the footer
+    document.body.appendChild(new FormIt.PluginUI.FooterModule().element);
 }
 
 // tell the client to subscribe to the kCameraChanged message 
