@@ -60,6 +60,8 @@ MatchPhoto.updatePhotoObjectToMatchCamera = function()
 
 }
 
+
+
 // set up the message listener
 MessagesPluginListener = {};
 MessagesPluginListener.MsgHandler = function(msg, payload) { 
@@ -72,6 +74,22 @@ if (!(MessagesPluginListener.hasOwnProperty("listener")))
 {
     MessagesPluginListener.listener = FormIt.Messaging.NewMessageListener();
 }
-// Assign the msg handler
-MessagesPluginListener.listener["FormIt.Message.kCameraChanged"] = MessagesPluginListener.MsgHandler;
-MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraChanged");
+
+// subscribe to the cameraChanged message if the web-side arguments say so
+MatchPhoto.subscribeToCameraChangedMessageByArgs = function(args)
+{
+    if (args.bToggle)
+    {
+        MessagesPluginListener.listener["FormIt.Message.kCameraChanged"] = MessagesPluginListener.MsgHandler;
+        MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraChanged");
+
+        // update the photo object to match the camera
+        // so the effect is immediate when the toggle is checked
+        MatchPhoto.updatePhotoObjectToMatchCamera();
+    }
+    else 
+    {
+        MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraChanged");
+    }
+}
+

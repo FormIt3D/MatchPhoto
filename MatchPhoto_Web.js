@@ -2,8 +2,11 @@ window.MatchPhoto = window.MatchPhoto || {};
 
 /*** web/UI code - runs natively in the plugin process ***/
 
+// temporary checkbox to disable camera changed message
+MatchPhoto.enabledCheckboxID = 'EnableMatchPhotoCheckbox';
+
 // initialize the UI
-MatchPhoto.initializeUI = async function()
+MatchPhoto.initializeUI = function()
 {
     // create an overall container for all objects that comprise the "content" of the plugin
     // everything except the footer
@@ -19,6 +22,23 @@ MatchPhoto.initializeUI = async function()
     // separator and space
     contentContainer.appendChild(document.createElement('hr'));
     contentContainer.appendChild(document.createElement('p'));
+
+    let enabledCheckbox = new FormIt.PluginUI.CheckboxModule('Enabled?', 'enabledCheckbox', 'multiModuleContainer', MatchPhoto.enabledCheckboxID);
+    contentContainer.appendChild(enabledCheckbox.element);
+    document.getElementById(MatchPhoto.enabledCheckboxID).checked = false;
+    document.getElementById(MatchPhoto.enabledCheckboxID).onclick = MatchPhoto.toggleSubscribeToCameraChangedMessage;
 }
 
+// tell the client to subscribe to the kCameraChanged message 
+// based on the checkbox toggle state
+MatchPhoto.toggleSubscribeToCameraChangedMessage = function()
+{
+    let isEnabled = document.getElementById(MatchPhoto.enabledCheckboxID).checked;
 
+    var args = { "bToggle" : isEnabled };
+
+    window.FormItInterface.CallMethod("MatchPhoto.subscribeToCameraChangedMessageByArgs", args, function(result)
+    {
+
+    });
+}
