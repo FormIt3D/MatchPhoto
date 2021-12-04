@@ -26,7 +26,7 @@ MatchPhoto.initializeUI = function()
     let enabledCheckbox = new FormIt.PluginUI.CheckboxModule('Enabled?', 'enabledCheckbox', 'multiModuleContainer', MatchPhoto.enabledCheckboxID);
     contentContainer.appendChild(enabledCheckbox.element);
     document.getElementById(MatchPhoto.enabledCheckboxID).checked = false;
-    document.getElementById(MatchPhoto.enabledCheckboxID).onclick = MatchPhoto.toggleSubscribeToCameraChangedMessage;
+    document.getElementById(MatchPhoto.enabledCheckboxID).onclick = MatchPhoto.toggleSubscribeToCameraMessages;
 
     // create the footer
     document.body.appendChild(new FormIt.PluginUI.FooterModule().element);
@@ -34,13 +34,18 @@ MatchPhoto.initializeUI = function()
 
 // tell the client to subscribe to the kCameraChanged message 
 // based on the checkbox toggle state
-MatchPhoto.toggleSubscribeToCameraChangedMessage = function()
+MatchPhoto.toggleSubscribeToCameraMessages = function()
 {
     let isEnabled = document.getElementById(MatchPhoto.enabledCheckboxID).checked;
 
     var args = { "bToggle" : isEnabled };
 
     window.FormItInterface.CallMethod("MatchPhoto.subscribeToCameraChangedMessageByArgs", args, function(result)
+    {
+
+    });
+
+    window.FormItInterface.CallMethod("MatchPhoto.subscribeToCameraStartedMessageByArgs", args, function(result)
     {
 
     });

@@ -1,22 +1,20 @@
 var MatchPhoto = MatchPhoto || {};
 
-/*** application code - runs asynchronously from plugin process to communicate with FormIt ***/
+/*** application code - runs asynchronously from plugin process to communicate with FormIt, must be in ES5 syntax ***/
 
 MatchPhoto.stringAttributeKey = 'FormIt::Plugins::MatchPhoto';
-MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
+MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo'; // TODO: this should not be hard-coded
 
+// this is called every frame
 MatchPhoto.updatePhotoObjectToMatchCamera = function()
 {
     var nEditingHistoryID = FormIt.GroupEdit.GetEditingHistoryID();
 
-    // first, check if a match photo object already exists in this history
-    var aInstancesWithStringAttribute = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(nEditingHistoryID, MatchPhoto.stringAttributeKey);
-    var bMatchPhotoObjectExists = aInstancesWithStringAttribute.length > 0;
+    var cameraObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nEditingHistoryID);
 
     // if the match photo object exists, move it to face the camera
-    if (bMatchPhotoObjectExists)
+    if (cameraObjectInstanceID != undefined)
     {
-        var cameraObjectInstanceID = aInstancesWithStringAttribute[0];
         var cameraObjectHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(nEditingHistoryID, cameraObjectInstanceID);
         var cameraObjectInstanceTransf3d = WSM.APIGetInstanceTransf3dReadOnly(nEditingHistoryID, cameraObjectInstanceID);
 
@@ -61,7 +59,44 @@ MatchPhoto.updatePhotoObjectToMatchCamera = function()
         FormIt.Layers.SetLayerPickable(layerID, false);
         FormIt.Layers.AssignLayerToObjects(layerID, matchPhotoObjectInstanceID);
     }
+}
 
+// get camera object instance ID, if available
+MatchPhoto.getPhotoObjectInstanceID = function(contextHistoryID)
+{
+    // first, check if a match photo object already exists in this history
+    var aInstancesWithStringAttribute = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(contextHistoryID, MatchPhoto.stringAttributeKey);
+    var cameraObjectInstanceID = aInstancesWithStringAttribute[0];
+
+    return cameraObjectInstanceID;
+}
+
+// get a material id by searching for its name in the in-sketch list
+MatchPhoto.getInSketchMaterialIDFromName = function(materialName)
+{
+    var allMaterialIDs = FormIt.MaterialProvider.GetMaterials(FormIt.LibraryType.SKETCH);
+
+    for (var i = 0; i < allMaterialIDs.length; i++)
+    {
+        var thisName = FormIt.MaterialProvider.GetMaterialName(FormIt.LibraryType.SKETCH, allMaterialIDs[i]).Name;
+
+        if (thisName == materialName)
+        {    
+            return allMaterialIDs[i];
+        }
+    }
+}
+
+// this is called on every camera operation start
+MatchPhoto.paintMatchPhotoObjectWithMaterial = function(cameraObjectInstanceID)
+{
+    // look for and apply the material to the camera object
+    // (hard-coded for now)
+    var materialName = "simple test photo";
+    var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
+
+    // paint the instance with the material
+    FormIt.SketchMaterials.AssignMaterialToObjects(materialID, cameraObjectInstanceID);
 }
 
 // set up the message listener
@@ -92,6 +127,24 @@ MatchPhoto.subscribeToCameraChangedMessageByArgs = function(args)
     else 
     {
         MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraChanged");
+    }
+}
+
+// subscribe to the cameraChanged message if the web-side arguments say so
+MatchPhoto.subscribeToCameraStartedMessageByArgs = function(args)
+{
+    if (args.bToggle)
+    {
+        MessagesPluginListener.listener["FormIt.Message.kCameraOperationStarted"] = MessagesPluginListener.MsgHandler;
+        MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraOperationStarted");
+
+        // paint the active photo object
+        var cameraInstanceObjectID = MatchPhoto.getPhotoObjectInstanceID(FormIt.GroupEdit.GetEditingHistoryID());
+        MatchPhoto.paintMatchPhotoObjectWithMaterial(cameraInstanceObjectID);
+    }
+    else 
+    {
+        MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraOperationStarted");
     }
 }
 
