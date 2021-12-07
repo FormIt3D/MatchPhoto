@@ -87,16 +87,45 @@ MatchPhoto.getInSketchMaterialIDFromName = function(materialName)
     }
 }
 
+MatchPhoto.getPhotoObjectCameraPlaneHistoryID = function(cameraObjectInstanceID)
+{
+    var matchPhotoObjectHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(0, cameraObjectInstanceID); // TODO: don't assume history 0
+
+    // the camera object contains two instances - one for the frustum lines, one for the camera plane
+    var aCameraObjectNestedInstanceIDs = WSM.APIGetAllObjectsByTypeReadOnly(matchPhotoObjectHistoryID, WSM.nObjectType.nInstanceType);
+
+    for (var i = 0; i < aCameraObjectNestedInstanceIDs.length; i++)
+    {
+        var nestedHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(matchPhotoObjectHistoryID, aCameraObjectNestedInstanceIDs[i]);
+
+        var nFaceID = WSM.APIGetAllObjectsByTypeReadOnly(nestedHistoryID, WSM.nObjectType.nFaceType);
+
+        if (nFaceID != null)
+        {
+            return nestedHistoryID;
+        }
+    }
+}
+
 // this is called on every camera operation start
 MatchPhoto.paintMatchPhotoObjectWithMaterial = function(cameraObjectInstanceID)
 {
+    // get the nested history ID containing the camera plane face
+    var nCameraPlaneHistoryID = MatchPhoto.getPhotoObjectCameraPlaneHistoryID(cameraObjectInstanceID);
+
+    // assume that history contains just one face
+    var nFaceID = WSM.APIGetAllObjectsByTypeReadOnly(nCameraPlaneHistoryID, WSM.nObjectType.nFaceType)[0];
+
+    // create an object history ID to identify the face in the context of its history
+    var objectHistoryID = WSM.ObjectHistoryID(nCameraPlaneHistoryID, nFaceID);
+
     // look for and apply the material to the camera object
     // (hard-coded for now)
     var materialName = "simple test photo";
     var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
 
-    // paint the instance with the material
-    FormIt.SketchMaterials.AssignMaterialToObjects(materialID, cameraObjectInstanceID);
+    // paint the face in the camera object
+    FormIt.SketchMaterials.AssignMaterialToObjects(materialID, objectHistoryID);
 }
 
 // set up the message listener
