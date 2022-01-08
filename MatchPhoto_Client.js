@@ -124,6 +124,14 @@ MatchPhoto.paintMatchPhotoObjectWithMaterial = function(cameraObjectInstanceID)
     var materialName = "simple test photo";
     var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
 
+    // make sure the material is set to 2' x 2'
+    // because of the way the camera object is made (-1 unit to 1 unit across origin),
+    // the material must be this size to fit the camera plane
+    var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
+    materialData.Data.Scale.x = 2;
+    materialData.Data.Scale.y = 2;
+    FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
+
     // paint the face in the camera object
     FormIt.SketchMaterials.AssignMaterialToObjects(materialID, objectHistoryID);
 }
