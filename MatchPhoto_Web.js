@@ -2,8 +2,9 @@ window.MatchPhoto = window.MatchPhoto || {};
 
 /*** web/UI code - runs natively in the plugin process ***/
 
-// temporary checkbox to disable camera changed message
+// IDs of elements that need to be modified or updated
 MatchPhoto.enabledCheckboxID = 'EnableMatchPhotoCheckbox';
+MatchPhoto.existingMatchPhotoListContainerID = 'existingMatchPhotoListContainer';
 
 // initialize the UI
 MatchPhoto.initializeUI = function()
@@ -23,10 +24,20 @@ MatchPhoto.initializeUI = function()
     contentContainer.appendChild(document.createElement('hr'));
     contentContainer.appendChild(document.createElement('p'));
 
+    let createNewMatchPhotoSubheader = new FormIt.PluginUI.HeaderModule('Create New Match Photo', '', 'headerContainer');
+    contentContainer.appendChild(createNewMatchPhotoSubheader.element);
+
     let enabledCheckbox = new FormIt.PluginUI.CheckboxModule('Enabled?', 'enabledCheckbox', 'multiModuleContainer', MatchPhoto.enabledCheckboxID);
     contentContainer.appendChild(enabledCheckbox.element);
     document.getElementById(MatchPhoto.enabledCheckboxID).checked = false;
     document.getElementById(MatchPhoto.enabledCheckboxID).onclick = MatchPhoto.toggleSubscribeToCameraMessages;
+
+    let manageExistingMatchPhotosSubheader = new FormIt.PluginUI.HeaderModule('Manage Existing Photos', '', 'headerContainer');
+    contentContainer.appendChild(manageExistingMatchPhotosSubheader.element);
+
+    let existingMatchPhotoListContainer = new FormIt.PluginUI.ScrollableListContainer('No Match Photos found!');
+    existingMatchPhotoListContainer.element.id = MatchPhoto.existingMatchPhotoListContainerID;
+    contentContainer.appendChild(existingMatchPhotoListContainer.element);
 
     // create the footer
     document.body.appendChild(new FormIt.PluginUI.FooterModule().element);

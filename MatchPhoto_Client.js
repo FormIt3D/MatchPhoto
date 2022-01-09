@@ -1,11 +1,12 @@
 var MatchPhoto = MatchPhoto || {};
 
-/*** application code - runs asynchronously from plugin process to communicate with FormIt, must be in ES5 syntax ***/
+/*** application code - runs asynchronously from plugin process to communicate with FormIt ***/
+/*** the FormIt application-side JS engine only supports ES5 syntax, so use var here ***/
 
 MatchPhoto.stringAttributeKey = 'FormIt::Plugins::MatchPhoto';
 MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo'; // TODO: this should not be hard-coded
 
-// this is called every frame
+// this is called every frame when Match Photo mode is enabled
 MatchPhoto.updatePhotoObjectToMatchCamera = function()
 {
     var nEditingHistoryID = FormIt.GroupEdit.GetEditingHistoryID();
@@ -87,31 +88,11 @@ MatchPhoto.getInSketchMaterialIDFromName = function(materialName)
     }
 }
 
-MatchPhoto.getPhotoObjectCameraPlaneHistoryID = function(cameraObjectInstanceID)
-{
-    var matchPhotoObjectHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(0, cameraObjectInstanceID); // TODO: don't assume history 0
-
-    // the camera object contains two instances - one for the frustum lines, one for the camera plane
-    var aCameraObjectNestedInstanceIDs = WSM.APIGetAllObjectsByTypeReadOnly(matchPhotoObjectHistoryID, WSM.nObjectType.nInstanceType);
-
-    for (var i = 0; i < aCameraObjectNestedInstanceIDs.length; i++)
-    {
-        var nestedHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(matchPhotoObjectHistoryID, aCameraObjectNestedInstanceIDs[i]);
-
-        var nFaceID = WSM.APIGetAllObjectsByTypeReadOnly(nestedHistoryID, WSM.nObjectType.nFaceType);
-
-        if (nFaceID != null)
-        {
-            return nestedHistoryID;
-        }
-    }
-}
-
 // this is called on every camera operation start
 MatchPhoto.paintMatchPhotoObjectWithMaterial = function(cameraObjectInstanceID)
 {
     // get the nested history ID containing the camera plane face
-    var nCameraPlaneHistoryID = MatchPhoto.getPhotoObjectCameraPlaneHistoryID(cameraObjectInstanceID);
+    var nCameraPlaneHistoryID = ManageCameras.getPCameraPlaneHistoryID(cameraObjectInstanceID);
 
     // assume that history contains just one face
     var nFaceID = WSM.APIGetAllObjectsByTypeReadOnly(nCameraPlaneHistoryID, WSM.nObjectType.nFaceType)[0];
