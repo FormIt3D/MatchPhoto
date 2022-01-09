@@ -3,21 +3,68 @@ var MatchPhoto = MatchPhoto || {};
 /*** application code - runs asynchronously from plugin process to communicate with FormIt ***/
 /*** the FormIt application-side JS engine only supports ES5 syntax, so use var here ***/
 
-MatchPhoto.stringAttributeKey = 'FormIt::Plugins::MatchPhoto';
+// the Match Photo container instance will always be in this history
+MatchPhoto.photoContainerContextHistoryID = 0;
+
+// string attribute keys for photo objects and their containers
+MatchPhoto.photoObjectContainerAttributeKey = 'FormIt::Plugins::MatchPhotoContainer';
+MatchPhoto.photoObjectAttributeKey = 'FormIt::Plugins::MatchPhotoObject';
 MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo'; // TODO: this should not be hard-coded
+
+// get or create the Match Photo container history ID
+MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID, stringAttributeKey)
+{
+    var aExistingInstanceIDs = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(nContextHistoryID, stringAttributeKey);
+    // if there isn't already a container instance, create it and return the history ID
+    if (aExistingInstanceIDs.length == 0)
+    {
+        // create an empty group
+        var matchPhotoContainerGroupID = WSM.APICreateGroup(nContextHistoryID, []);
+
+        // create an empty history
+        var matchPhotoContainerHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(nContextHistoryID, matchPhotoContainerGroupID);
+
+        var matchPhotoContainerInstanceID = WSM.APIGetObjectsByTypeReadOnly(nContextHistoryID, matchPhotoContainerGroupID, WSM.nObjectType.nInstanceType)[0];
+
+        // add the string attribute for the container
+        WSM.Utils.SetOrCreateStringAttributeForObject(nContextHistoryID,
+            matchPhotoContainerInstanceID, MatchPhoto.photoObjectContainerAttributeKey, "");
+
+        //put the instance on a layer and lock the layer
+        FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
+        var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
+        FormIt.Layers.SetLayerPickable(layerID, false);
+        FormIt.Layers.AssignLayerToObjects(layerID, matchPhotoContainerInstanceID);
+
+        return matchPhotoContainerHistoryID;
+    }
+    // there really should only be one container for Match Photo objects
+    else if (aExistingInstanceIDs.length == 1)
+    {
+        return WSM.APIGetGroupReferencedHistoryReadOnly(nContextHistoryID, aExistingInstanceIDs[0], false);
+    }
+    // if there are more than one, return the first and log to the console
+    else 
+    {
+        console.log("WARNING: There were more than one Match Photo container instance IDs found in the sketch!");
+
+        return WSM.APIGetGroupReferencedHistoryReadOnly(nContextHistoryID, aExistingInstanceIDs[0], false);
+    }
+}
 
 // this is called every frame when Match Photo mode is enabled
 MatchPhoto.updatePhotoObjectToMatchCamera = function()
 {
-    var nEditingHistoryID = FormIt.GroupEdit.GetEditingHistoryID();
+    // get the photo object container history ID
+    var matchPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey);
 
-    var cameraObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nEditingHistoryID);
+    var cameraObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(matchPhotoObjectContainerHistoryID);
 
     // if the match photo object exists, move it to face the camera
     if (cameraObjectInstanceID != undefined)
     {
-        var cameraObjectHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(nEditingHistoryID, cameraObjectInstanceID);
-        var cameraObjectInstanceTransf3d = WSM.APIGetInstanceTransf3dReadOnly(nEditingHistoryID, cameraObjectInstanceID);
+        var cameraObjectHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(matchPhotoObjectContainerHistoryID, cameraObjectInstanceID);
+        var cameraObjectInstanceTransf3d = WSM.APIGetInstanceTransf3dReadOnly(matchPhotoObjectContainerHistoryID, cameraObjectInstanceID);
 
         // re-create the instance transform without any scaling
         var cameraObjectCoordinateSystem = WSM.Transf3d.GetCoordinateSystem(cameraObjectInstanceTransf3d);
@@ -39,7 +86,7 @@ MatchPhoto.updatePhotoObjectToMatchCamera = function()
         var finalTransform = WSM.Transf3d.Multiply(cameraTransform, cameraObjectInvertedTransform);
 
         // apply the transform to the camera object
-        WSM.APITransformObject(nEditingHistoryID, cameraObjectInstanceID, finalTransform);	
+        WSM.APITransformObject(matchPhotoObjectContainerHistoryID, cameraObjectInstanceID, finalTransform);	
     }
     // otherwise, make it from scratch
     else
@@ -49,10 +96,10 @@ MatchPhoto.updatePhotoObjectToMatchCamera = function()
         var viewportSize = FormIt.Cameras.GetViewportSize();
         var aspectRatio = viewportSize.width / viewportSize.height;
     
-        var matchPhotoObjectInstanceID = ManageCameras.createCameraGeometryFromCameraData(nEditingHistoryID, cameraData, aspectRatio);
+        var matchPhotoObjectInstanceID = ManageCameras.createCameraGeometryFromCameraData(matchPhotoObjectContainerHistoryID, cameraData, aspectRatio);
 
-        WSM.Utils.SetOrCreateStringAttributeForObject(nEditingHistoryID,
-            matchPhotoObjectInstanceID, MatchPhoto.stringAttributeKey, "Test!");
+        WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
+            matchPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey, "Test!");
 
         //put the instance on a layer and lock the layer
         FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
@@ -65,8 +112,10 @@ MatchPhoto.updatePhotoObjectToMatchCamera = function()
 // get camera object instance ID, if available
 MatchPhoto.getPhotoObjectInstanceID = function(contextHistoryID)
 {
+    console.log("TEST! " + contextHistoryID);
+    
     // first, check if a match photo object already exists in this history
-    var aInstancesWithStringAttribute = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(contextHistoryID, MatchPhoto.stringAttributeKey);
+    var aInstancesWithStringAttribute = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(contextHistoryID, MatchPhoto.photoObjectAttributeKey);
     var cameraObjectInstanceID = aInstancesWithStringAttribute[0];
 
     return cameraObjectInstanceID;
@@ -91,8 +140,10 @@ MatchPhoto.getInSketchMaterialIDFromName = function(materialName)
 // this is called on every camera operation start
 MatchPhoto.paintMatchPhotoObjectWithMaterial = function(cameraObjectInstanceID)
 {
+    var nPhotoContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey);
+
     // get the nested history ID containing the camera plane face
-    var nCameraPlaneHistoryID = ManageCameras.getPCameraPlaneHistoryID(cameraObjectInstanceID);
+    var nCameraPlaneHistoryID = ManageCameras.getCameraPlaneHistoryID(nPhotoContainerHistoryID, cameraObjectInstanceID);
 
     // assume that history contains just one face
     var nFaceID = WSM.APIGetAllObjectsByTypeReadOnly(nCameraPlaneHistoryID, WSM.nObjectType.nFaceType)[0];
@@ -156,8 +207,12 @@ MatchPhoto.subscribeToCameraStartedMessageByArgs = function(args)
         MessagesPluginListener.listener["FormIt.Message.kCameraOperationStarted"] = MessagesPluginListener.MsgHandler;
         MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraOperationStarted");
 
+        // get the photo object container history ID
+        var matchPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey);
+
         // paint the active photo object
-        var cameraInstanceObjectID = MatchPhoto.getPhotoObjectInstanceID(FormIt.GroupEdit.GetEditingHistoryID());
+        var cameraInstanceObjectID = MatchPhoto.getPhotoObjectInstanceID(matchPhotoObjectContainerHistoryID);
+
         MatchPhoto.paintMatchPhotoObjectWithMaterial(cameraInstanceObjectID);
     }
     else 
