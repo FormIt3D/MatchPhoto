@@ -4,6 +4,7 @@ window.MatchPhoto = window.MatchPhoto || {};
 
 // IDs of elements that need to be modified or updated
 MatchPhoto.enabledCheckboxID = 'EnableMatchPhotoCheckbox';
+MatchPhoto.newMatchPhotoMaterialNameInputID = 'NewMatchPhotoMaterialNameInput';
 MatchPhoto.existingMatchPhotoListContainerID = 'existingMatchPhotoListContainer';
 
 // initialize the UI
@@ -24,14 +25,19 @@ MatchPhoto.initializeUI = function()
     contentContainer.appendChild(document.createElement('hr'));
     contentContainer.appendChild(document.createElement('p'));
 
+    // new match photo section
     let createNewMatchPhotoSubheader = new FormIt.PluginUI.HeaderModule('Create New Match Photo', '', 'headerContainer');
     contentContainer.appendChild(createNewMatchPhotoSubheader.element);
+
+    let newMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name for Photo:', 'newMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID);
+    contentContainer.appendChild(newMatchPhotoMaterialNameInput.element);
 
     let enabledCheckbox = new FormIt.PluginUI.CheckboxModule('Enabled?', 'enabledCheckbox', 'multiModuleContainer', MatchPhoto.enabledCheckboxID);
     contentContainer.appendChild(enabledCheckbox.element);
     document.getElementById(MatchPhoto.enabledCheckboxID).checked = false;
-    document.getElementById(MatchPhoto.enabledCheckboxID).onclick = MatchPhoto.toggleSubscribeToCameraMessages;
+    document.getElementById(MatchPhoto.enabledCheckboxID).onclick = MatchPhoto.toggleStartStopNewMatchPhoto;
 
+    // existing match photos section
     let manageExistingMatchPhotosSubheader = new FormIt.PluginUI.HeaderModule('Manage Existing Photos', '', 'headerContainer');
     contentContainer.appendChild(manageExistingMatchPhotosSubheader.element);
 
@@ -43,20 +49,31 @@ MatchPhoto.initializeUI = function()
     document.body.appendChild(new FormIt.PluginUI.FooterModule().element);
 }
 
-// tell the client to subscribe to the kCameraChanged message 
-// based on the checkbox toggle state
-MatchPhoto.toggleSubscribeToCameraMessages = function()
+MatchPhoto.populateListWithExistingMatchPhotos = function(listContainerID)
+{
+    // get the list container
+    let listContainer = document.getElementById(MatchPhoto.existingMatchPhotoListContainerID);
+
+
+}
+
+// start a new match photo using the material name in the field
+MatchPhoto.toggleStartStopNewMatchPhoto = function()
 {
     let isEnabled = document.getElementById(MatchPhoto.enabledCheckboxID).checked;
 
-    var args = { "bToggle" : isEnabled };
+    let photoObjectName = document.getElementById(MatchPhoto.newMatchPhotoMaterialNameInputID).value;
 
-    window.FormItInterface.CallMethod("MatchPhoto.subscribeToCameraChangedMessageByArgs", args, function(result)
+    let args = { "bToggle" : isEnabled, "photoObjectName" : photoObjectName };
+
+    // initialize the match photo object
+    window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", args, function(result)
     {
 
     });
 
-    window.FormItInterface.CallMethod("MatchPhoto.subscribeToCameraStartedMessageByArgs", args, function(result)
+    // start or stop subscribing to the camera changed message
+    window.FormItInterface.CallMethod("MatchPhoto.toggleSubscribeToCameraChangedMessage", args, function(result)
     {
 
     });

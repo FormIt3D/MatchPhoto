@@ -6,10 +6,15 @@ var MatchPhoto = MatchPhoto || {};
 // the Match Photo container instance will always be in this history
 MatchPhoto.photoContainerContextHistoryID = 0;
 
+// the active match photo object (found using the matching string attribute value)
+MatchPhoto.activeMatchPhotoObjectName = '';
+
 // string attribute keys for photo objects and their containers
 MatchPhoto.photoObjectContainerAttributeKey = 'FormIt::Plugins::MatchPhotoContainer';
 MatchPhoto.photoObjectAttributeKey = 'FormIt::Plugins::MatchPhotoObject';
-MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo'; // TODO: this should not be hard-coded
+
+// the layer used to store photo objects and their container - so they can be locked
+MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
 
 // get or create the Match Photo container history ID
 MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID, stringAttributeKey)
@@ -53,17 +58,16 @@ MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID,
 }
 
 // this is called every frame when Match Photo mode is enabled
-MatchPhoto.updatePhotoObjectToMatchCamera = function()
+MatchPhoto.updateActivePhotoObjectToMatchCamera = function()
 {
     // get the photo object container history ID
     var matchPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey);
 
-    var cameraObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(matchPhotoObjectContainerHistoryID);
+    var cameraObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(matchPhotoObjectContainerHistoryID, MatchPhoto.activeMatchPhotoObjectName);
 
     // if the match photo object exists, move it to face the camera
     if (cameraObjectInstanceID != undefined)
     {
-        var cameraObjectHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(matchPhotoObjectContainerHistoryID, cameraObjectInstanceID);
         var cameraObjectInstanceTransf3d = WSM.APIGetInstanceTransf3dReadOnly(matchPhotoObjectContainerHistoryID, cameraObjectInstanceID);
 
         // re-create the instance transform without any scaling
@@ -99,7 +103,7 @@ MatchPhoto.updatePhotoObjectToMatchCamera = function()
         var matchPhotoObjectInstanceID = ManageCameras.createCameraGeometryFromCameraData(matchPhotoObjectContainerHistoryID, cameraData, aspectRatio);
 
         WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
-            matchPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey, "Test!");
+            matchPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey, MatchPhoto.activeMatchPhotoObjectName);
 
         //put the instance on a layer and lock the layer
         FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
@@ -110,13 +114,12 @@ MatchPhoto.updatePhotoObjectToMatchCamera = function()
 }
 
 // get camera object instance ID, if available
-MatchPhoto.getPhotoObjectInstanceID = function(contextHistoryID)
-{
-    console.log("TEST! " + contextHistoryID);
-    
-    // first, check if a match photo object already exists in this history
-    var aInstancesWithStringAttribute = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKey(contextHistoryID, MatchPhoto.photoObjectAttributeKey);
-    var cameraObjectInstanceID = aInstancesWithStringAttribute[0];
+MatchPhoto.getPhotoObjectInstanceID = function(contextHistoryID, photoObjectAttributeValue)
+{ 
+    // get the photo object instance ID in the context history 
+    // with the matching string attribute value
+    var aInstancesWithStringAttributeValue = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKeyAndValue(contextHistoryID, MatchPhoto.photoObjectAttributeKey, photoObjectAttributeValue);
+    var cameraObjectInstanceID = aInstancesWithStringAttributeValue[0];
 
     return cameraObjectInstanceID;
 }
@@ -137,13 +140,18 @@ MatchPhoto.getInSketchMaterialIDFromName = function(materialName)
     }
 }
 
-// this is called on every camera operation start
-MatchPhoto.paintMatchPhotoObjectWithMaterial = function(cameraObjectInstanceID)
+MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
 {
+    // get the photo object container history ID
+    var matchPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey);
+
+    // paint the active photo object
+    var cameraInstanceObjectID = MatchPhoto.getPhotoObjectInstanceID(matchPhotoObjectContainerHistoryID, MatchPhoto.activeMatchPhotoObjectName);
+
     var nPhotoContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey);
 
     // get the nested history ID containing the camera plane face
-    var nCameraPlaneHistoryID = ManageCameras.getCameraPlaneHistoryID(nPhotoContainerHistoryID, cameraObjectInstanceID);
+    var nCameraPlaneHistoryID = ManageCameras.getCameraPlaneHistoryID(nPhotoContainerHistoryID, cameraInstanceObjectID);
 
     // assume that history contains just one face
     var nFaceID = WSM.APIGetAllObjectsByTypeReadOnly(nCameraPlaneHistoryID, WSM.nObjectType.nFaceType)[0];
@@ -153,7 +161,7 @@ MatchPhoto.paintMatchPhotoObjectWithMaterial = function(cameraObjectInstanceID)
 
     // look for and apply the material to the camera object
     // (hard-coded for now)
-    var materialName = "simple test photo";
+    var materialName = MatchPhoto.activeMatchPhotoObjectName;
     var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
 
     // make sure the material is set to 2' x 2'
@@ -168,56 +176,46 @@ MatchPhoto.paintMatchPhotoObjectWithMaterial = function(cameraObjectInstanceID)
     FormIt.SketchMaterials.AssignMaterialToObjects(materialID, objectHistoryID);
 }
 
-// set up the message listener
+// for new match photos, need to initialize them
+// by creating the photo object and painting it with the correct material
+MatchPhoto.initializeMatchPhotoObject = function(args)
+{
+    // set the active match photo object to the one listed in args
+    MatchPhoto.activeMatchPhotoObjectName = args.photoObjectName;
+
+    if (args.bToggle)
+    {
+        MatchPhoto.updateActivePhotoObjectToMatchCamera();
+        MatchPhoto.paintActiveMatchPhotoObjectWithMaterial();
+    }
+}
+
+/*** set up message listeners and execute functions based on FormIt messages ***/
+
 MessagesPluginListener = {};
 MessagesPluginListener.MsgHandler = function(msg, payload) { 
 
-    MatchPhoto.updatePhotoObjectToMatchCamera();
+    MatchPhoto.updateActivePhotoObjectToMatchCamera();
 
 };
-// Create a Message Listener that handles calling the subscribed message handlers.
+
 if (!(MessagesPluginListener.hasOwnProperty("listener")))
 {
     MessagesPluginListener.listener = FormIt.Messaging.NewMessageListener();
 }
 
-// subscribe to the cameraChanged message if the web-side arguments say so
-MatchPhoto.subscribeToCameraChangedMessageByArgs = function(args)
+// subscribe or unsubscribe from the kCameraChanged message based on the web-side args
+MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
 {
     if (args.bToggle)
     {
         MessagesPluginListener.listener["FormIt.Message.kCameraChanged"] = MessagesPluginListener.MsgHandler;
         MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraChanged");
 
-        // update the photo object to match the camera
-        // so the effect is immediate when the toggle is checked
-        MatchPhoto.updatePhotoObjectToMatchCamera();
+        MatchPhoto.updateActivePhotoObjectToMatchCamera();
     }
     else 
     {
         MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraChanged");
     }
 }
-
-// subscribe to the cameraChanged message if the web-side arguments say so
-MatchPhoto.subscribeToCameraStartedMessageByArgs = function(args)
-{
-    if (args.bToggle)
-    {
-        MessagesPluginListener.listener["FormIt.Message.kCameraOperationStarted"] = MessagesPluginListener.MsgHandler;
-        MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraOperationStarted");
-
-        // get the photo object container history ID
-        var matchPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey);
-
-        // paint the active photo object
-        var cameraInstanceObjectID = MatchPhoto.getPhotoObjectInstanceID(matchPhotoObjectContainerHistoryID);
-
-        MatchPhoto.paintMatchPhotoObjectWithMaterial(cameraInstanceObjectID);
-    }
-    else 
-    {
-        MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraOperationStarted");
-    }
-}
-
