@@ -12,6 +12,7 @@ MatchPhoto.activeMatchPhotoObjectName = '';
 // string attribute keys for photo objects and their containers
 MatchPhoto.photoObjectContainerAttributeKey = 'FormIt::Plugins::MatchPhotoContainer';
 MatchPhoto.photoObjectAttributeKey = 'FormIt::Plugins::MatchPhotoObject';
+MatchPhoto.photoObjectOriginalAspectRatioAttributeKey = 'FormIt::Plugins::MatchPhotoOriginalAspectRatio';
 
 // the layer used to store photo objects and their container - so they can be locked
 MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
@@ -61,7 +62,7 @@ MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID,
 }
 
 // this is called every frame when Match Photo mode is enabled
-MatchPhoto.updateActivePhotoObjectToMatchCamera = function()
+MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
 {
     // get the photo object container history ID
     var matchPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
@@ -100,8 +101,7 @@ MatchPhoto.updateActivePhotoObjectToMatchCamera = function()
     {
         var cameraData = FormIt.Cameras.GetCameraData();
     
-        var viewportSize = FormIt.Cameras.GetViewportSize();
-        var aspectRatio = viewportSize.width / viewportSize.height;
+        var aspectRatio = MatchPhoto.getMaterialAspectRatio(MatchPhoto.activeMatchPhotoObjectName);
     
         var matchPhotoObjectInstanceID = ManageCameras.createCameraGeometryFromCameraData(matchPhotoObjectContainerHistoryID, cameraData, aspectRatio);
 
@@ -166,6 +166,42 @@ MatchPhoto.getInSketchMaterialIDFromName = function(materialName)
     }
 }
 
+MatchPhoto.getMaterialAspectRatio = function(materialName)
+{
+    var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
+    var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
+
+    var aspectRatio = materialData.Data.Scale.x / materialData.Data.Scale.y;
+    
+    return aspectRatio;
+}
+
+MatchPhoto.getOriginalMaterialAspectRatioFromAttribute = function(nPhotoObjectContextHistoryID, nPhotoObjectInstanceID)
+{
+    return WSM.Utils.GetStringAttributeForObject(nPhotoObjectContextHistoryID, nPhotoObjectInstanceID, MatchPhoto.photoObjectOriginalAspectRatioAttributeKey).value;
+}
+
+MatchPhoto.setOriginalMaterialAspectRatioAsAttribute = function(nPhotoObjectContextHistoryID, nPhotoObjectInstanceID, nOriginalAspectRatio)
+{
+    WSM.Utils.SetOrCreateStringAttributeForObject(nPhotoObjectContextHistoryID,
+        nPhotoObjectInstanceID, MatchPhoto.photoObjectOriginalAspectRatioAttributeKey, nOriginalAspectRatio.toString());
+}
+
+MatchPhoto.restoreOriginalMaterialAspectRatioFromAttribute = function(nPhotoObjectContextHistoryID, nPhotoObjectInstanceID, materialName)
+{
+    // get the original aspect ratio from the instance attribute
+    var originalAspectRatio = MatchPhoto.getOriginalMaterialAspectRatioFromAttribute(nPhotoObjectContextHistoryID, nPhotoObjectInstanceID);
+
+    var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
+    var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
+
+    // keep the x scale the same, but change the Y scale based on the aspect ratio
+    var newMaterialScaleY = materialData.Data.Scale.y * (1 / originalAspectRatio);
+
+    materialData.Data.Scale.y = newMaterialScaleY;
+    FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
+}
+
 MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
 {
     // get the photo object container history ID
@@ -188,6 +224,10 @@ MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
     var materialName = MatchPhoto.activeMatchPhotoObjectName;
     var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
 
+    // record the original aspect ratio from the material
+    var originalAspectRatio = MatchPhoto.getMaterialAspectRatio(materialName);
+    MatchPhoto.setOriginalMaterialAspectRatioAsAttribute(nPhotoContainerHistoryID, nCameraInstanceObjectID, originalAspectRatio);
+
     // make sure the material is set to 2' x 2'
     // because of the way the camera object is made (-1 unit to 1 unit across origin),
     // the material must be this size to fit the camera plane
@@ -209,7 +249,7 @@ MatchPhoto.initializeMatchPhotoObject = function(args)
 
     if (args.bToggle)
     {
-        MatchPhoto.updateActivePhotoObjectToMatchCamera();
+        MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
         MatchPhoto.paintActiveMatchPhotoObjectWithMaterial();
     }
 }
@@ -219,7 +259,7 @@ MatchPhoto.initializeMatchPhotoObject = function(args)
 MessagesPluginListener = {};
 MessagesPluginListener.MsgHandler = function(msg, payload) { 
 
-    MatchPhoto.updateActivePhotoObjectToMatchCamera();
+    MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
 
 };
 
@@ -236,7 +276,7 @@ MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
         MessagesPluginListener.listener["FormIt.Message.kCameraChanged"] = MessagesPluginListener.MsgHandler;
         MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraChanged");
 
-        MatchPhoto.updateActivePhotoObjectToMatchCamera();
+        MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
     }
     else 
     {
