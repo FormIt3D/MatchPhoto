@@ -49,8 +49,9 @@ MatchPhoto.initializeUI = function()
     let manageExistingMatchPhotosSubheader = new FormIt.PluginUI.HeaderModule('Manage Existing Photos', '', 'headerContainer');
     contentContainer.appendChild(manageExistingMatchPhotosSubheader.element);
 
-    MatchPhoto.existingMatchPhotoListContainer = new FormIt.PluginUI.ScrollableListContainer('No Match Photos found!');
+    MatchPhoto.existingMatchPhotoListContainer = new FormIt.PluginUI.ListContainer('No Match Photos found!');
     MatchPhoto.existingMatchPhotoListContainer.element.id = MatchPhoto.existingMatchPhotoListContainerID;
+    MatchPhoto.existingMatchPhotoListContainer.setListHeight(300);
     contentContainer.appendChild(MatchPhoto.existingMatchPhotoListContainer.element);
 
     // create the footer
@@ -62,11 +63,9 @@ MatchPhoto.initializeUI = function()
 
 MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
 {
-    let matchPhotoListItemContainer = document.createElement('div');
-    matchPhotoListItemContainer.className = 'listItemContainer';
+    let matchPhotoListItemContainer = new FormIt.PluginUI.ExpandableListItem(matchPhotoObjectName);
 
-    matchPhotoListItemContainer.innerHTML = matchPhotoObjectName;
-    return matchPhotoListItemContainer;
+    return matchPhotoListItemContainer.element;
 }
 
 MatchPhoto.clearExistingMatchPhotosList = function()
@@ -109,7 +108,7 @@ MatchPhoto.populateExistingMatchPhotosList = function()
         // invoke this to show or hide the zero state message
         MatchPhoto.existingMatchPhotoListContainer.toggleZeroStateMessage();
 
-        });
+    });
 }
 
 // start a new match photo using the material name in the field
