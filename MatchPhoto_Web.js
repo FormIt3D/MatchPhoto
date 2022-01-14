@@ -73,10 +73,11 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
     
     // add the name input
     let nameInputID = matchPhotoObjectName.replace(/\s/g, '') + 'InputID';
-    let photoObjectNameInput = new FormIt.PluginUI.TextInputModule('Material Name:', 'matchPhotoNameInput', 'inputModuleContainer', nameInputID, function(){});
+    let photoObjectNameInputModule = new FormIt.PluginUI.TextInputModule('Material Name:', 'matchPhotoNameInput', 'inputModuleContainer', nameInputID, function(){});
 
-    expandableContentContainer.appendChild(photoObjectNameInput.element);
-    //document.getElementById(nameInputID).value = matchPhotoObjectName;
+    expandableContentContainer.appendChild(photoObjectNameInputModule.element);
+    
+    photoObjectNameInputModule.getInput().value = matchPhotoObjectName;
 
     // add a multi-module for the manage buttons to arrange horizontally
     let multiModuleContainer = new FormIt.PluginUI.MultiModuleContainer().element;
