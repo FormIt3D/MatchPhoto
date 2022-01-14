@@ -65,6 +65,41 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
 {
     let matchPhotoListItemContainer = new FormIt.PluginUI.ExpandableListItem(matchPhotoObjectName);
 
+    // set the expandable content container height
+    matchPhotoListItemContainer.setContentContainerHeight(120);
+
+    // the second (last) element is the expandable content container
+    let expandableContentContainer = matchPhotoListItemContainer.element.lastChild;
+    
+    // add the name input
+    let nameInputID = matchPhotoObjectName.replace(/\s/g, '') + 'InputID';
+    let photoObjectNameInput = new FormIt.PluginUI.TextInputModule('Material Name:', 'matchPhotoNameInput', 'inputModuleContainer', nameInputID, function(){});
+
+    expandableContentContainer.appendChild(photoObjectNameInput.element);
+    //document.getElementById(nameInputID).value = matchPhotoObjectName;
+
+    // add a multi-module for the manage buttons to arrange horizontally
+    let multiModuleContainer = new FormIt.PluginUI.MultiModuleContainer().element;
+    expandableContentContainer.appendChild(multiModuleContainer);
+
+    // create the manage buttons
+
+    // edit
+    let editButton = new FormIt.PluginUI.Button('Edit Match Photo', function()
+    {
+
+    });
+    editButton.element.style.marginRight = 10;
+    multiModuleContainer.appendChild(editButton.element);
+
+    // delete
+    let deleteButton = new FormIt.PluginUI.Button('Delete Match Photo', function()
+    {
+
+    });
+    deleteButton.element.style.marginRight = 10;
+    multiModuleContainer.appendChild(deleteButton.element);
+
     return matchPhotoListItemContainer.element;
 }
 
