@@ -17,6 +17,9 @@ MatchPhoto.photoObjectOriginalAspectRatioAttributeKey = 'FormIt::Plugins::MatchP
 // the layer used to store photo objects and their container - so they can be locked
 MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
 
+// the active notification handle - needs to be cleared so messages don't stack
+MatchPhoto.activeNotificationHandle = undefined;
+
 // get or create the Match Photo container history ID
 MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID, stringAttributeKey, bCreateIfNotFound)
 {
@@ -305,6 +308,24 @@ MatchPhoto.initializeMatchPhotoObject = function(args)
     MatchPhoto.paintActiveMatchPhotoObjectWithMaterial();
 }
 
+// check if the given material name is available in the sketch
+MatchPhoto.getIsMaterialNameValid = function(args)
+{
+    var materialName = args.matchPhotoObjectName;
+
+    var materialIDFromName = MatchPhoto.getInSketchMaterialIDFromName(materialName);
+
+    if (materialIDFromName)
+    {
+        return true;
+    }
+    else
+    {
+        FormIt.UI.ShowNotification('No material found with that name. \nSpecify a valid material name and try again.', FormIt.NotificationType.Error, 0);
+        return false;
+    }
+}
+
 /*** set up message listeners and execute functions based on FormIt messages ***/
 
 MessagesPluginListener = {};
@@ -327,11 +348,16 @@ MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
         MessagesPluginListener.listener["FormIt.Message.kCameraChanged"] = MessagesPluginListener.MsgHandler;
         MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraChanged");
 
+        MatchPhoto.activeNotificationHandle = FormIt.UI.ShowNotification('Match Photo Mode active.', FormIt.NotificationType.Information, 0);
+
         MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
     }
     else 
     {
         MatchPhoto.updateActivePhotoObjectWithCurrentCamera();
+
+        FormIt.UI.CloseNotification(MatchPhoto.activeNotificationHandle);
+        FormIt.UI.ShowNotification('Match Photo Mode ended.', FormIt.NotificationType.Information, 0);
         
         MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraChanged");
     }
