@@ -89,7 +89,12 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
     // edit
     let editButton = new FormIt.PluginUI.Button('Edit Match Photo', function()
     {
+        let args = { "photoObjectName" : matchPhotoObjectName };
 
+        window.FormItInterface.CallMethod("MatchPhoto.updateCameraToMatchPhotoObject", args, function(result)
+        {
+
+        }); 
     });
     editButton.element.style.marginRight = 10;
     multiModuleContainer.appendChild(editButton.element);

@@ -116,6 +116,37 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
     }
 }
 
+// one-time alignment of the camera to the match photo object
+// so that editing can begin, or re-generation of the camera can be invoked
+MatchPhoto.updateCameraToMatchPhotoObject = function(args)
+{
+    var matchPhotoObjectName = args.photoObjectName;
+
+    // get the context history
+    var nContextHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, false);
+
+    // get the match photo object instance
+    var nMatchPhotoObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nContextHistoryID, matchPhotoObjectName);
+
+    // get the camera data from the photo object
+    var cameraData = ManageCameras.getCameraDataFromCameraObjectAttribute(nContextHistoryID, nMatchPhotoObjectInstanceID);
+
+    // set the camera to match the camera data
+    FormIt.Cameras.SetCameraData(cameraData);
+}
+
+// called when match photo mode is ended
+// to update the attribute with the last camera position 
+MatchPhoto.updateActivePhotoObjectWithCurrentCamera = function()
+{
+    // get the photo object container history ID
+    var nPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
+
+    var nCameraObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nPhotoObjectContainerHistoryID, MatchPhoto.activeMatchPhotoObjectName);
+
+    ManageCameras.setCameraDataInCameraObjectAttribute(nPhotoObjectContainerHistoryID, nCameraObjectInstanceID, FormIt.Cameras.GetCameraData());
+}
+
 // get photo object instance ID, if available
 MatchPhoto.getPhotoObjectInstanceID = function(nContextHistoryID, photoObjectAttributeValue)
 { 
@@ -125,6 +156,20 @@ MatchPhoto.getPhotoObjectInstanceID = function(nContextHistoryID, photoObjectAtt
     var cameraObjectInstanceID = aInstancesWithStringAttributeValue[0];
 
     return cameraObjectInstanceID;
+}
+
+// get the object history ID of the face that should be painted with the material
+MatchPhoto.getPhotoObjectFaceObjectHistoryIDForMaterial = function(nPhotoContainerHistoryID, nPhotoObjectInstanceID)
+{
+    // get the nested history ID containing the camera plane face
+    var nCameraPlaneHistoryID = ManageCameras.getCameraPlaneHistoryID(nPhotoContainerHistoryID, nPhotoObjectInstanceID);
+
+    // assume that history contains just one face
+    var nFaceID = WSM.APIGetAllObjectsByTypeReadOnly(nCameraPlaneHistoryID, WSM.nObjectType.nFaceType)[0];
+
+    var faceObjectHistoryID = WSM.ObjectHistoryID(nCameraPlaneHistoryID, nFaceID);
+
+    return faceObjectHistoryID;
 }
 
 // delete a Match Photo object
@@ -137,6 +182,9 @@ MatchPhoto.deleteMatchPhotoObject = function(args)
 
     // get the match photo object instance
     var matchPhotoObjectInstance = MatchPhoto.getPhotoObjectInstanceID(nContextHistoryID, photoObjectAttributeValue);
+
+    // reset the material from this object to its original aspect ratio
+    MatchPhoto.restoreOriginalMaterialAspectRatioFromAttribute(nContextHistoryID, matchPhotoObjectInstance, photoObjectAttributeValue);
 
     // delete it
     WSM.APIDeleteObject(nContextHistoryID, matchPhotoObjectInstance);
@@ -219,20 +267,11 @@ MatchPhoto.restoreOriginalMaterialAspectRatioFromAttribute = function(nPhotoObje
 
 MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
 {
-    // get the photo object container history ID
     var nPhotoContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
 
-    // paint the active photo object
-    var nCameraInstanceObjectID = MatchPhoto.getPhotoObjectInstanceID(nPhotoContainerHistoryID, MatchPhoto.activeMatchPhotoObjectName);
+    var nPhotoObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nPhotoContainerHistoryID, MatchPhoto.activeMatchPhotoObjectName);
 
-    // get the nested history ID containing the camera plane face
-    var nCameraPlaneHistoryID = ManageCameras.getCameraPlaneHistoryID(nPhotoContainerHistoryID, nCameraInstanceObjectID);
-
-    // assume that history contains just one face
-    var nFaceID = WSM.APIGetAllObjectsByTypeReadOnly(nCameraPlaneHistoryID, WSM.nObjectType.nFaceType)[0];
-
-    // create an object history ID to identify the face in the context of its history
-    var objectHistoryID = WSM.ObjectHistoryID(nCameraPlaneHistoryID, nFaceID);
+    var photoFaceObjectHistoryID = MatchPhoto.getPhotoObjectFaceObjectHistoryIDForMaterial(nPhotoContainerHistoryID, nPhotoObjectInstanceID);
 
     // look for and apply the material to the camera object
     // (hard-coded for now)
@@ -241,7 +280,7 @@ MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
 
     // record the original aspect ratio from the material
     var originalAspectRatio = MatchPhoto.getMaterialAspectRatio(materialName);
-    MatchPhoto.setOriginalMaterialAspectRatioAsAttribute(nPhotoContainerHistoryID, nCameraInstanceObjectID, originalAspectRatio);
+    MatchPhoto.setOriginalMaterialAspectRatioAsAttribute(nPhotoContainerHistoryID, nPhotoObjectInstanceID, originalAspectRatio);
 
     // make sure the material is set to 2' x 2'
     // because of the way the camera object is made (-1 unit to 1 unit across origin),
@@ -252,7 +291,7 @@ MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
     FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
 
     // paint the face in the camera object
-    FormIt.SketchMaterials.AssignMaterialToObjects(materialID, objectHistoryID);
+    FormIt.SketchMaterials.AssignMaterialToObjects(materialID, photoFaceObjectHistoryID);
 }
 
 // for new match photos, need to initialize them
@@ -295,6 +334,8 @@ MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
     }
     else 
     {
+        MatchPhoto.updateActivePhotoObjectWithCurrentCamera();
+        
         MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraChanged");
     }
 }
