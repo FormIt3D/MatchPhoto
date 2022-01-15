@@ -3,8 +3,9 @@ window.MatchPhoto = window.MatchPhoto || {};
 /*** web/UI code - runs natively in the plugin process ***/
 
 // IDs of elements that need to be modified or updated
-MatchPhoto.enabledCheckboxID = 'EnableMatchPhotoCheckbox';
-MatchPhoto.newMatchPhotoMaterialNameInputID = 'NewMatchPhotoMaterialNameInput';
+MatchPhoto.enabledCheckboxID = 'enableMatchPhotoCheckbox';
+MatchPhoto.newMatchPhotoMaterialNameInputID = 'newMatchPhotoMaterialNameInput';
+MatchPhoto.existingMatchPhotoMaterialNameFormID = 'existingMatchPhotoNameForm';
 
 // the list of existing Match Photo objects
 MatchPhoto.existingMatchPhotoListContainer = undefined;
@@ -73,7 +74,7 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
     
     // add the name input
     let nameInputID = matchPhotoObjectName.replace(/\s/g, '') + 'InputID';
-    let photoObjectNameInputModule = new FormIt.PluginUI.TextInputModule('Material Name:', 'matchPhotoNameInput', 'inputModuleContainer', nameInputID, function(){});
+    let photoObjectNameInputModule = new FormIt.PluginUI.TextInputModule('Material Name:', MatchPhoto.existingMatchPhotoMaterialNameFormID, 'inputModuleContainer', nameInputID, function(){});
 
     expandableContentContainer.appendChild(photoObjectNameInputModule.element);
     
@@ -95,8 +96,15 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
 
     // delete
     let deleteButton = new FormIt.PluginUI.Button('Delete Match Photo', function()
-    {
+    {       
+        let args = { "photoObjectName" : matchPhotoObjectName };
 
+        window.FormItInterface.CallMethod("MatchPhoto.deleteMatchPhotoObject", args, function(result)
+        {
+
+            MatchPhoto.populateExistingMatchPhotosList();
+
+        }); 
     });
     deleteButton.element.style.marginRight = 10;
     multiModuleContainer.appendChild(deleteButton.element);

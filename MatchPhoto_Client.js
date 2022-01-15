@@ -117,14 +117,29 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
 }
 
 // get photo object instance ID, if available
-MatchPhoto.getPhotoObjectInstanceID = function(contextHistoryID, photoObjectAttributeValue)
+MatchPhoto.getPhotoObjectInstanceID = function(nContextHistoryID, photoObjectAttributeValue)
 { 
     // get the photo object instance ID in the context history 
     // with the matching string attribute value
-    var aInstancesWithStringAttributeValue = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKeyAndValue(contextHistoryID, MatchPhoto.photoObjectAttributeKey, photoObjectAttributeValue);
+    var aInstancesWithStringAttributeValue = FormIt.PluginUtils.Application.getGroupInstancesByStringAttributeKeyAndValue(nContextHistoryID, MatchPhoto.photoObjectAttributeKey, photoObjectAttributeValue);
     var cameraObjectInstanceID = aInstancesWithStringAttributeValue[0];
 
     return cameraObjectInstanceID;
+}
+
+// delete a Match Photo object
+MatchPhoto.deleteMatchPhotoObject = function(args)
+{
+    var photoObjectAttributeValue = args.photoObjectName;
+
+    // get the context history
+    var nContextHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, false);
+
+    // get the match photo object instance
+    var matchPhotoObjectInstance = MatchPhoto.getPhotoObjectInstanceID(nContextHistoryID, photoObjectAttributeValue);
+
+    // delete it
+    WSM.APIDeleteObject(nContextHistoryID, matchPhotoObjectInstance);
 }
 
 // get all photo objects in the container
