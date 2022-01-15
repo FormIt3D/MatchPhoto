@@ -301,11 +301,8 @@ MatchPhoto.initializeMatchPhotoObject = function(args)
     // set the active match photo object to the one listed in args
     MatchPhoto.activeMatchPhotoObjectName = args.matchPhotoObjectName;
 
-    if (args.bToggle)
-    {
-        MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
-        MatchPhoto.paintActiveMatchPhotoObjectWithMaterial();
-    }
+    MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
+    MatchPhoto.paintActiveMatchPhotoObjectWithMaterial();
 }
 
 /*** set up message listeners and execute functions based on FormIt messages ***/
@@ -325,7 +322,7 @@ if (!(MessagesPluginListener.hasOwnProperty("listener")))
 // subscribe or unsubscribe from the kCameraChanged message based on the web-side args
 MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
 {
-    if (args.bToggle)
+    if (args.bIsMatchPhotoModeActive)
     {
         MessagesPluginListener.listener["FormIt.Message.kCameraChanged"] = MessagesPluginListener.MsgHandler;
         MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraChanged");
