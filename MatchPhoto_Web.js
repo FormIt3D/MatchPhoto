@@ -76,12 +76,7 @@ MatchPhoto.initializeUI = function()
     MatchPhoto.layerVisibilityCheckbox.getInput().checked = false;
     document.getElementById(MatchPhoto.layerVisibilityCheckboxID).onclick = function()
     {
-        let args = { "bIsChecked" : MatchPhoto.layerVisibilityCheckbox.getInput().checked };
-
-        window.FormItInterface.CallMethod("MatchPhoto.setMatchPhotoLayerVisibilityByArgs", args, function(result)
-        {
-
-        }); 
+        MatchPhoto.layerVisibilityCheckboxOnClick();
     };
 
     // create a container for all the UI elements that should show
@@ -128,10 +123,11 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
     // add the name input
     let nameInputID = matchPhotoObjectName.replace(/\s/g, '') + 'InputID';
     let photoObjectNameInputModule = new FormIt.PluginUI.TextInputModule('Material Name:', 'existingMatchPhotoNameForm', 'inputModuleContainer', nameInputID, function(){});
+    photoObjectNameInputModule.getInput().value = matchPhotoObjectName;
+    photoObjectNameInputModule.getInput().disabled = true; // only editable in Match Photo mode
 
     expandableContentContainer.appendChild(photoObjectNameInputModule.element);
-    
-    photoObjectNameInputModule.getInput().value = matchPhotoObjectName;
+
 
     // add a multi-module for the manage buttons to arrange horizontally
     let multiModuleContainer = new FormIt.PluginUI.MultiModuleContainer().element;
@@ -146,7 +142,10 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
 
         window.FormItInterface.CallMethod("MatchPhoto.updateCameraToMatchPhotoObject", args, function(result)
         {
-
+            // enable the visibility of Match Photo objects
+            MatchPhoto.layerVisibilityCheckbox.getInput().checked = true;
+            MatchPhoto.layerVisibilityCheckboxOnClick();
+            
         }); 
     });
     viewButton.element.style.marginRight = 10;
@@ -265,6 +264,18 @@ MatchPhoto.toggleMatchPhotoLayerVisibility = function()
     {
 
     });
+}
+
+// the function called when clicking the visibility checkbox
+// can also be invoked by other functions to simulate clicking the checkbox
+MatchPhoto.layerVisibilityCheckboxOnClick = function()
+{
+    let args = { "bIsChecked" : MatchPhoto.layerVisibilityCheckbox.getInput().checked };
+
+    window.FormItInterface.CallMethod("MatchPhoto.setMatchPhotoLayerVisibilityByArgs", args, function(result)
+    {
+
+    }); 
 }
 
 // start a match photo session the material name in the field
