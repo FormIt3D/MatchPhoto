@@ -326,6 +326,26 @@ MatchPhoto.getIsMaterialNameValid = function(args)
     }
 }
 
+// check if the given material name is already used by another Match Photo object
+MatchPhoto.getIsMaterialNameAlreadyUsedForMatchPhoto = function(args)
+{
+    var materialName = args.matchPhotoObjectName;
+
+    // get all existing Match Photo objects (names)
+    var aExistingMatchPhotoObjectNames = MatchPhoto.getAllPhotoObjects();
+
+    for (var i = 0; i < aExistingMatchPhotoObjectNames.length; i++)
+    {
+        if (aExistingMatchPhotoObjectNames[i] == materialName)
+        {
+            FormIt.UI.ShowNotification('This material is already in use by another Match Photo object. \nSpecify a different material name and try again.', FormIt.NotificationType.Error, 0);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // get the Match Photo layer visibility state
 MatchPhoto.getMatchPhotoLayerVisibilityState = function()
 {

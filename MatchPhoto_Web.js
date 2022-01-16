@@ -54,7 +54,10 @@ MatchPhoto.initializeUI = function()
 
     let startNewMatchPhotoButton = new FormIt.PluginUI.ButtonWithTooltip('Create New Match Photo', 'Start Match Photo Mode with the specified material used as a photograph overlaid on the screen.', function()
     {
-        MatchPhoto.startMatchPhotoMode(MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value);
+        MatchPhoto.startMatchPhotoModeForNewObject(MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value);
+
+        // set the active Match Photo name input to this one
+        MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value;
     });
     inactiveMatchPhotoModeContainer.appendChild(startNewMatchPhotoButton.element);
 
@@ -94,10 +97,11 @@ MatchPhoto.initializeUI = function()
     activeMatchPhotoModeContainer.appendChild(MatchPhoto.activeMatchPhotoMaterialNameInput.element);
 
     // end the active match photo session
-    let endMatchPhotoModeButton = new FormIt.PluginUI.Button('End Match Photo', function()
+    let endMatchPhotoModeButton = new FormIt.PluginUI.Button('Done Editing', function()
     {
         let photoObjectName = document.getElementById(MatchPhoto.newMatchPhotoMaterialNameInputID).value;
 
+        MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value = '';
         MatchPhoto.endMatchPhotoMode(photoObjectName);
     });
     activeMatchPhotoModeContainer.appendChild(endMatchPhotoModeButton.element);
@@ -113,6 +117,7 @@ MatchPhoto.initializeUI = function()
 MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
 {
     let matchPhotoListItemContainer = new FormIt.PluginUI.ExpandableListItem(matchPhotoObjectName);
+    matchPhotoListItemContainer.element.setAttribute('title', 'Click to expand and view options for this item.');
 
     // set the expandable content container height
     matchPhotoListItemContainer.setContentContainerHeight(120);
@@ -123,8 +128,10 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
     // add the name input
     let nameInputID = matchPhotoObjectName.replace(/\s/g, '') + 'InputID';
     let photoObjectNameInputModule = new FormIt.PluginUI.TextInputModule('Material Name:', 'existingMatchPhotoNameForm', 'inputModuleContainer', nameInputID, function(){});
-    photoObjectNameInputModule.getInput().value = matchPhotoObjectName;
-    photoObjectNameInputModule.getInput().disabled = true; // only editable in Match Photo mode
+    let photoObjectNameInput = photoObjectNameInputModule.getInput();
+    photoObjectNameInput.value = matchPhotoObjectName;
+    photoObjectNameInput.disabled = true; // only editable in Match Photo mode
+    photoObjectNameInput.setAttribute('title', 'Click "Edit" to change the material name.');
 
     expandableContentContainer.appendChild(photoObjectNameInputModule.element);
 
@@ -160,7 +167,7 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
         window.FormItInterface.CallMethod("MatchPhoto.updateCameraToMatchPhotoObject", args, function(result)
         {
             // then start Match Photo mode
-            MatchPhoto.startMatchPhotoMode(photoObjectNameInputModule.getInput().value);
+            MatchPhoto.startMatchPhotoModeForExistingObject(photoObjectNameInputModule.getInput().value);
 
             // set the active Match Photo name input to this one
             MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = photoObjectNameInputModule.getInput().value;
@@ -278,35 +285,68 @@ MatchPhoto.layerVisibilityCheckboxOnClick = function()
     }); 
 }
 
-// start a match photo session the material name in the field
+// start a match photo session using the specified material name
 MatchPhoto.startMatchPhotoMode = function(matchPhotoObjectName)
 {
-    let initialArgs = { "matchPhotoObjectName" : matchPhotoObjectName };
+    MatchPhoto.bIsMatchPhotoModeActive = true;
+
+    MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI();
+
+    let args = { "bIsMatchPhotoModeActive" : MatchPhoto.bIsMatchPhotoModeActive, "matchPhotoObjectName" : matchPhotoObjectName };
+
+    // initialize the match photo object
+    window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", args, function(result)
+    {
+
+    });
+
+    // start or stop subscribing to the camera changed message
+    window.FormItInterface.CallMethod("MatchPhoto.toggleSubscribeToCameraChangedMessage", args, function(result)
+    {
+
+    });
+}
+
+// start a match photo session for a new match photo
+// with checks for valid material name and material name already in use
+MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName)
+{
+    let args = { "matchPhotoObjectName" : matchPhotoObjectName };
 
     // first, check if the given photo object name (material name) is valid
-    window.FormItInterface.CallMethod("MatchPhoto.getIsMaterialNameValid", initialArgs, function(result)
+    window.FormItInterface.CallMethod("MatchPhoto.getIsMaterialNameValid", args, function(result)
     {
         // only proceed if the given material name is valid
         if (JSON.parse(result) == true)
         {
-            MatchPhoto.bIsMatchPhotoModeActive = true;
+            // then, check that the given material name isn't already in use
+            // first, check if the given photo object name (material name) is valid
+            window.FormItInterface.CallMethod("MatchPhoto.getIsMaterialNameAlreadyUsedForMatchPhoto", args, function(result)
+            {
+                // only proceed if the given material name not used
+                if (JSON.parse(result) == false)
+                {
+                    MatchPhoto.startMatchPhotoMode(matchPhotoObjectName);
+                }
+            });    
+        }   
+    });
+}
 
-            MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI();
-        
-            let args = { "bIsMatchPhotoModeActive" : MatchPhoto.bIsMatchPhotoModeActive, "matchPhotoObjectName" : matchPhotoObjectName };
-        
-            // initialize the match photo object
-            window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", args, function(result)
-            {
-        
-            });
-        
-            // start or stop subscribing to the camera changed message
-            window.FormItInterface.CallMethod("MatchPhoto.toggleSubscribeToCameraChangedMessage", args, function(result)
-            {
-        
-            });
-        }
+// start a match photo session for an existing match photo object
+// with a check for valid material name
+MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName)
+{
+    let args = { "matchPhotoObjectName" : matchPhotoObjectName };
+
+    // first, check if the given photo object name (material name) is valid
+    window.FormItInterface.CallMethod("MatchPhoto.getIsMaterialNameValid", args, function(result)
+    {
+        // only proceed if the given material name is valid
+        if (JSON.parse(result) == true)
+        {
+            MatchPhoto.startMatchPhotoMode(matchPhotoObjectName);    
+        }   
     });
 }
 
