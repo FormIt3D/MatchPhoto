@@ -95,7 +95,7 @@ MatchPhoto.initializeUI = function()
     // create the name input so the Match Photo material can be changed
     MatchPhoto.activeMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name for Photo:', 'activeMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID, function()
     {
-        MatchPhoto.rebuildMatchPhotoObject(MatchPhoto.activeMatchPhotoMaterialNameInput.existingInputValue, MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value);
+        MatchPhoto.tryRebuildPhotoObject(MatchPhoto.activeMatchPhotoMaterialNameInput.existingInputValue, MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value);
     });
     activeMatchPhotoModeContainer.appendChild(MatchPhoto.activeMatchPhotoMaterialNameInput.element);
 
@@ -371,7 +371,7 @@ MatchPhoto.rebuildMatchPhotoObject = function(oldMatchPhotoObjectName, newMatchP
         });
 
         // for some reason, the first initialization results in the photo painted upside-down
-        // so repaint it to fix this
+        // so call the update function to fix this
         window.FormItInterface.CallMethod("MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera", { }, function(result)
         {
     
@@ -380,7 +380,38 @@ MatchPhoto.rebuildMatchPhotoObject = function(oldMatchPhotoObjectName, newMatchP
 }
 
 // the function used when the user is done editing the name or focal length field
-// first checks if anything has changed
+// first it checks whether the specified name is valid before continuing
+MatchPhoto.tryRebuildPhotoObject = function(oldMatchPhotoObjectName, newMatchPhotoObjectName)
+{
+    let args = { "matchPhotoObjectName" : newMatchPhotoObjectName };
+
+    // first, check if the given photo object name (material name) is valid
+    window.FormItInterface.CallMethod("MatchPhoto.getIsMaterialNameValid", args, function(result)
+    {
+        // only proceed if the given material name is valid
+        if (JSON.parse(result) == true)
+        {
+            // then, check that the given material name isn't already in use
+            // first, check if the given photo object name (material name) is valid
+            window.FormItInterface.CallMethod("MatchPhoto.getIsMaterialNameAlreadyUsedForMatchPhoto", args, function(result)
+            {
+                // only proceed if the given material name not used
+                if (JSON.parse(result) == false)
+                {
+                    MatchPhoto.rebuildMatchPhotoObject(oldMatchPhotoObjectName, newMatchPhotoObjectName);
+                }
+                else
+                {
+                    MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = oldMatchPhotoObjectName;
+                }
+            });    
+        }
+        else
+        {
+            MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = oldMatchPhotoObjectName;
+        } 
+    });
+}
 
 // end a Match Photo session
 MatchPhoto.endMatchPhotoMode = function(matchPhotoObjectName)

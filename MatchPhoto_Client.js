@@ -20,6 +20,15 @@ MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
 // the active notification handle - needs to be cleared so messages don't stack
 MatchPhoto.activeNotificationHandle = undefined;
 
+// clear the active notification handle if it exists
+MatchPhoto.dismissActiveNotification = function()
+{
+    if (MatchPhoto.activeNotificationHandle != undefined)
+    {
+        FormIt.UI.CloseNotification(MatchPhoto.activeNotificationHandle);
+    }
+}
+
 // get or create the Match Photo container history ID
 MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID, stringAttributeKey, bCreateIfNotFound)
 {
@@ -321,7 +330,8 @@ MatchPhoto.getIsMaterialNameValid = function(args)
     }
     else
     {
-        FormIt.UI.ShowNotification('No material found with that name. \nSpecify a valid material name and try again.', FormIt.NotificationType.Error, 0);
+        MatchPhoto.dismissActiveNotification(MatchPhoto.activeNotificationHandle);
+        MatchPhoto.activeNotificationHandle = FormIt.UI.ShowNotification('No material found with that name. \nSpecify a valid material name and try again.', FormIt.NotificationType.Error, 0);
         return false;
     }
 }
@@ -338,7 +348,8 @@ MatchPhoto.getIsMaterialNameAlreadyUsedForMatchPhoto = function(args)
     {
         if (aExistingMatchPhotoObjectNames[i] == materialName)
         {
-            FormIt.UI.ShowNotification('This material is already in use by another Match Photo object. \nSpecify a different material name and try again.', FormIt.NotificationType.Error, 0);
+            MatchPhoto.dismissActiveNotification(MatchPhoto.activeNotificationHandle);
+            MatchPhoto.activeNotificationHandle = FormIt.UI.ShowNotification('This material is already in use by another Match Photo object. \nSpecify a different material name and try again.', FormIt.NotificationType.Error, 0);
             return true;
         }
     }
@@ -409,6 +420,7 @@ MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
         MessagesPluginListener.listener["FormIt.Message.kCameraChanged"] = MessagesPluginListener.MsgHandler;
         MessagesPluginListener.listener.SubscribeMessage("FormIt.Message.kCameraChanged");
 
+        MatchPhoto.dismissActiveNotification(MatchPhoto.activeNotificationHandle);
         MatchPhoto.activeNotificationHandle = FormIt.UI.ShowNotification('Match Photo Mode active.', FormIt.NotificationType.Information, 0);
 
         MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
@@ -417,7 +429,7 @@ MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
     {
         MatchPhoto.updateActivePhotoObjectWithCurrentCamera();
 
-        FormIt.UI.CloseNotification(MatchPhoto.activeNotificationHandle);
+        MatchPhoto.dismissActiveNotification(MatchPhoto.activeNotificationHandle);
         FormIt.UI.ShowNotification('Match Photo Mode ended.', FormIt.NotificationType.Information, 0);
         
         MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraChanged");
