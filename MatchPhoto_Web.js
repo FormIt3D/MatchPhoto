@@ -8,7 +8,8 @@ MatchPhoto.bIsMatchPhotoModeActive = false;
 MatchPhoto.inactiveMatchPhotoModeContainerID = 'inactiveMatchPhotoModeContainer';
 MatchPhoto.activeMatchPhotoModeContainerID = 'activeMatchPhotoModeContainer';
 
-MatchPhoto.enabledCheckboxID = 'enableMatchPhotoCheckbox';
+MatchPhoto.layerVisibilityCheckbox = undefined;
+MatchPhoto.layerVisibilityCheckboxID = 'enableMatchPhotoCheckbox';
 
 MatchPhoto.newmatchPhotoMaterialNameInput = undefined;
 MatchPhoto.newMatchPhotoMaterialNameInputID = 'newMatchPhotoMaterialNameInput';
@@ -57,15 +58,9 @@ MatchPhoto.initializeUI = function()
     });
     inactiveMatchPhotoModeContainer.appendChild(startNewMatchPhotoButton.element);
 
-    let enabledCheckbox = new FormIt.PluginUI.CheckboxModule('Enabled?', 'enabledCheckbox', 'multiModuleContainer', MatchPhoto.enabledCheckboxID);
-    inactiveMatchPhotoModeContainer.appendChild(enabledCheckbox.element);
-    document.getElementById(MatchPhoto.enabledCheckboxID).checked = false;
-    document.getElementById(MatchPhoto.enabledCheckboxID).onclick = function()
-    {
-        let photoObjectName = document.getElementById(MatchPhoto.newMatchPhotoMaterialNameInputID).value;
-
-        MatchPhoto.toggleStartStopMatchPhotoMode(photoObjectName);
-    };
+    // separator and space
+    inactiveMatchPhotoModeContainer.appendChild(document.createElement('hr'));
+    inactiveMatchPhotoModeContainer.appendChild(document.createElement('p'));
 
     // existing match photos section
     let manageExistingMatchPhotosSubheader = new FormIt.PluginUI.HeaderModule('Manage Existing', 'View, edit, and delete existing Match Photo objects in the current sketch.', 'headerContainer');
@@ -75,6 +70,19 @@ MatchPhoto.initializeUI = function()
     MatchPhoto.existingMatchPhotoListContainer.element.id = MatchPhoto.existingMatchPhotoListContainerID;
     MatchPhoto.existingMatchPhotoListContainer.setListHeight(300);
     inactiveMatchPhotoModeContainer.appendChild(MatchPhoto.existingMatchPhotoListContainer.element);
+
+    MatchPhoto.layerVisibilityCheckbox = new FormIt.PluginUI.CheckboxModule('Show Match Photo Objects', 'enabledCheckbox', 'multiModuleContainer', MatchPhoto.layerVisibilityCheckboxID);
+    inactiveMatchPhotoModeContainer.appendChild(MatchPhoto.layerVisibilityCheckbox.element);
+    MatchPhoto.layerVisibilityCheckbox.getInput().checked = false;
+    document.getElementById(MatchPhoto.layerVisibilityCheckboxID).onclick = function()
+    {
+        let args = { "bIsChecked" : MatchPhoto.layerVisibilityCheckbox.getInput().checked };
+
+        window.FormItInterface.CallMethod("MatchPhoto.setMatchPhotoLayerVisibilityByArgs", args, function(result)
+        {
+
+        }); 
+    };
 
     // create a container for all the UI elements that should show
     // when Match Photo mode is active
@@ -103,6 +111,7 @@ MatchPhoto.initializeUI = function()
     document.body.appendChild(new FormIt.PluginUI.FooterModule().element);
 
     MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI();
+    MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState();
     MatchPhoto.populateExistingMatchPhotosList();
 }
 
@@ -238,6 +247,26 @@ MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI = function()
     }
 }
 
+// synchronize the visibility checkbox with the layer visibility state
+MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState = function()
+{
+    window.FormItInterface.CallMethod("MatchPhoto.getMatchPhotoLayerVisibilityState", { }, function(result)
+    {
+        MatchPhoto.layerVisibilityCheckbox.getInput().checked = JSON.parse(result);
+    });
+}
+
+// toggle the Match Photo object layer on or off
+MatchPhoto.toggleMatchPhotoLayerVisibility = function()
+{
+    let args = { "bIsChecked" : MatchPhoto.layerVisibilityCheckbox.getInput().checked };
+
+    window.FormItInterface.CallMethod("MatchPhoto.setMatchPhotoLayerVisibilityByArgs", args, function(result)
+    {
+
+    });
+}
+
 // start a match photo session the material name in the field
 MatchPhoto.startMatchPhotoMode = function(matchPhotoObjectName)
 {
@@ -268,8 +297,6 @@ MatchPhoto.startMatchPhotoMode = function(matchPhotoObjectName)
             });
         }
     });
-
-
 }
 
 // end a match photo session

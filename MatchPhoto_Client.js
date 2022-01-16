@@ -326,6 +326,47 @@ MatchPhoto.getIsMaterialNameValid = function(args)
     }
 }
 
+// get the Match Photo layer visibility state
+MatchPhoto.getMatchPhotoLayerVisibilityState = function()
+{
+    var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
+
+    if (layerID)
+    {
+        var layerData = FormIt.Layers.GetLayerData(layerID);
+        var bIsLayerVisible = layerData.Visible;
+
+        return bIsLayerVisible;
+    }
+    else 
+    {
+        return false;
+    }
+}
+
+// toggle the Match Photo object layer on or off depending on the checkbox state
+MatchPhoto.setMatchPhotoLayerVisibilityByArgs = function(args)
+{
+    var bIsChecked = args.bIsChecked;
+
+    var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
+
+    if (bIsChecked)
+    {
+        if (layerID)
+        {
+            FormIt.Layers.SetLayerVisibility(MatchPhoto.camerasContainerLayerName, true);
+        }
+    }
+    else
+    {
+        if (layerID)
+        {
+            FormIt.Layers.SetLayerVisibility(MatchPhoto.camerasContainerLayerName, false);
+        }
+    }
+}
+
 /*** set up message listeners and execute functions based on FormIt messages ***/
 
 MessagesPluginListener = {};
