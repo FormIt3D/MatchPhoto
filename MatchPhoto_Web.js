@@ -93,7 +93,10 @@ MatchPhoto.initializeUI = function()
     activeMatchPhotoModeContainer.appendChild(activeMatchPhotoSubheader.element);
 
     // create the name input so the Match Photo material can be changed
-    MatchPhoto.activeMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name for Photo:', 'activeMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID);
+    MatchPhoto.activeMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name for Photo:', 'activeMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID, function()
+    {
+        MatchPhoto.rebuildMatchPhotoObject(MatchPhoto.activeMatchPhotoMaterialNameInput.existingInputValue, MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value);
+    });
     activeMatchPhotoModeContainer.appendChild(MatchPhoto.activeMatchPhotoMaterialNameInput.element);
 
     // end the active match photo session
@@ -285,7 +288,7 @@ MatchPhoto.layerVisibilityCheckboxOnClick = function()
     }); 
 }
 
-// start a match photo session using the specified material name
+// start a Match Photo session using the specified material name
 MatchPhoto.startMatchPhotoMode = function(matchPhotoObjectName)
 {
     MatchPhoto.bIsMatchPhotoModeActive = true;
@@ -307,7 +310,7 @@ MatchPhoto.startMatchPhotoMode = function(matchPhotoObjectName)
     });
 }
 
-// start a match photo session for a new match photo
+// start a Match Photo session for a new match photo
 // with checks for valid material name and material name already in use
 MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName)
 {
@@ -333,7 +336,7 @@ MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName)
     });
 }
 
-// start a match photo session for an existing match photo object
+// start a Match Photo session for an existing match photo object
 // with a check for valid material name
 MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName)
 {
@@ -350,7 +353,36 @@ MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName)
     });
 }
 
-// end a match photo session
+// while Match Photo mode is running, rebuild the active object with the given settings
+// for example, specifying a new material or focal length
+MatchPhoto.rebuildMatchPhotoObject = function(oldMatchPhotoObjectName, newMatchPhotoObjectName)
+{
+    let deleteArgs = { "photoObjectName" : oldMatchPhotoObjectName };
+
+    // find the match photo object and delete it
+    window.FormItInterface.CallMethod("MatchPhoto.deleteMatchPhotoObject", deleteArgs, function(result)
+    {
+        let initializeArgs = { "matchPhotoObjectName" : newMatchPhotoObjectName };
+
+        // initialize the new Match Photo object
+        window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", initializeArgs, function(result)
+        {
+    
+        });
+
+        // for some reason, the first initialization results in the photo painted upside-down
+        // so repaint it to fix this
+        window.FormItInterface.CallMethod("MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera", { }, function(result)
+        {
+    
+        });
+    });
+}
+
+// the function used when the user is done editing the name or focal length field
+// first checks if anything has changed
+
+// end a Match Photo session
 MatchPhoto.endMatchPhotoMode = function(matchPhotoObjectName)
 {
     MatchPhoto.bIsMatchPhotoModeActive = false;
