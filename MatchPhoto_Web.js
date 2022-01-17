@@ -3,6 +3,7 @@ window.MatchPhoto = window.MatchPhoto || {};
 /*** web/UI code - runs natively in the plugin process ***/
 
 MatchPhoto.bIsMatchPhotoModeActive = false;
+MatchPhoto.defaultCameraPlaneDistance = 5; // feet
 
 // IDs of elements that need to be referenced or modified
 MatchPhoto.inactiveMatchPhotoModeContainerID = 'inactiveMatchPhotoModeContainer';
@@ -11,11 +12,17 @@ MatchPhoto.activeMatchPhotoModeContainerID = 'activeMatchPhotoModeContainer';
 MatchPhoto.layerVisibilityCheckbox = undefined;
 MatchPhoto.layerVisibilityCheckboxID = 'enableMatchPhotoCheckbox';
 
-MatchPhoto.newmatchPhotoMaterialNameInput = undefined;
+MatchPhoto.newMatchPhotoMaterialNameInput = undefined;
 MatchPhoto.newMatchPhotoMaterialNameInputID = 'newMatchPhotoMaterialNameInput';
+
+MatchPhoto.newMatchPhotoCameraPlaneDistanceInput = undefined;
+MatchPhoto.newMatchPhotoCameraPlaneDistanceInputID = 'newMatchPhotoCameraPlaneDistanceInput';
 
 MatchPhoto.activeMatchPhotoMaterialNameInput = undefined;
 MatchPhoto.activeMatchPhotoMaterialNameInputID = 'activeMatchPhotoMaterialNameInput';
+
+MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput = undefined;
+MatchPhoto.activeMatchPhotoCameraPlaneDistanceInputID = 'activeMatchPhotoMaterialNameInput';
 
 MatchPhoto.existingMatchPhotoListContainer = undefined;
 MatchPhoto.existingMatchPhotoListContainerID = 'existingMatchPhotoListContainer';
@@ -23,6 +30,11 @@ MatchPhoto.existingMatchPhotoListContainerID = 'existingMatchPhotoListContainer'
 // initialize the UI
 MatchPhoto.initializeUI = function()
 {
+    // clear the existing content if it exists
+    if (document.getElementById('contentContainer'))
+    {
+        document.getElementById('contentContainer').parentElement.removeChild(document.getElementById('contentContainer'));
+    }
     // create an overall container for all objects that comprise the "content" of the plugin
     // everything except the footer
     let contentContainer = document.createElement('div');
@@ -48,16 +60,29 @@ MatchPhoto.initializeUI = function()
     let createNewMatchPhotoSubheader = new FormIt.PluginUI.HeaderModule('Create New', 'Start Match Photo Mode with the specified material used as a photograph overlaid on the screen.', 'headerContainer');
     inactiveMatchPhotoModeContainer.appendChild(createNewMatchPhotoSubheader.element);
 
+    // the name input
     MatchPhoto.newMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name:', 'newMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID);
     MatchPhoto.newMatchPhotoMaterialNameInput.getInput().setAttribute('placeholder', 'Enter material name to use as photo...');
     inactiveMatchPhotoModeContainer.appendChild(MatchPhoto.newMatchPhotoMaterialNameInput.element);
 
+    // the camera plane distance input
+    MatchPhoto.newMatchPhotoCameraPlaneDistanceInput = new FormIt.PluginUI.TextInputModule('Camera Plane Distance:', 'newMatchPhotoCameraPlaneDistanceInputModule', 'inputModuleContainer', MatchPhoto.newMatchPhotoCameraPlaneDistanceInputID, function()
+        {
+            MatchPhoto.populateInputWithConvertedValueString(MatchPhoto.newMatchPhotoCameraPlaneDistanceInput, MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().value);
+        });
+    MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().setAttribute('title', 'The distance from the camera that the photo will appear. Enter small numbers for foreground photos, larger numbers for background photos.');
+    // set the default camera plane distance
+    MatchPhoto.populateInputWithConvertedValueString(MatchPhoto.newMatchPhotoCameraPlaneDistanceInput, MatchPhoto.defaultCameraPlaneDistance);
+
+    inactiveMatchPhotoModeContainer.appendChild(MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.element);
+
     let startNewMatchPhotoButton = new FormIt.PluginUI.ButtonWithTooltip('Create New Match Photo', 'Start Match Photo Mode with the specified material used as a photograph overlaid on the screen.', function()
     {
-        MatchPhoto.startMatchPhotoModeForNewObject(MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value);
+        MatchPhoto.startMatchPhotoModeForNewObject(MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value, MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().value);
 
-        // set the active Match Photo name input to this one
+        // synchronize the active Match Photo name and camera plane distance inputs with these
         MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value;
+        MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.getInput().value = MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().value;
     });
     inactiveMatchPhotoModeContainer.appendChild(startNewMatchPhotoButton.element);
 
@@ -93,11 +118,20 @@ MatchPhoto.initializeUI = function()
     activeMatchPhotoModeContainer.appendChild(activeMatchPhotoSubheader.element);
 
     // create the name input so the Match Photo material can be changed
-    MatchPhoto.activeMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name for Photo:', 'activeMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID, function()
+    MatchPhoto.activeMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name:', 'activeMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID, function()
     {
         MatchPhoto.tryRebuildPhotoObject(MatchPhoto.activeMatchPhotoMaterialNameInput.existingInputValue, MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value);
     });
     activeMatchPhotoModeContainer.appendChild(MatchPhoto.activeMatchPhotoMaterialNameInput.element);
+
+    // create the camera plane distance input so it can be changed
+    MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput = new FormIt.PluginUI.TextInputModule('Camera Plane Distance:', 'activeMatchPhotoCameraPlaneDistanceInputModule', 'inputModuleContainerTop', MatchPhoto.activeMatchPhotoCameraPlaneDistanceInputID, function()
+    {
+        MatchPhoto.populateInputWithConvertedValueString(MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput, MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.getInput().value);
+
+        MatchPhoto.rebuildMatchPhotoObject(MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value, MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value, MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.getInput().value);
+    });
+    activeMatchPhotoModeContainer.appendChild(MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.element);
 
     // end the active match photo session
     let endMatchPhotoModeButton = new FormIt.PluginUI.Button('Done Editing', function()
@@ -117,27 +151,56 @@ MatchPhoto.initializeUI = function()
     MatchPhoto.populateExistingMatchPhotosList();
 }
 
+// update the UI
+MatchPhoto.updateUI = function()
+{
+    // update the dimension field with the current units
+    let args = { "string" : MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().value };
+    window.FormItInterface.CallMethod("MatchPhoto.convertStringToLinearValue", args, function(result)
+    {
+        MatchPhoto.populateInputWithConvertedValueString(MatchPhoto.newMatchPhotoCameraPlaneDistanceInput, JSON.parse(result));
+    }); 
+
+    // update other UI elements
+    MatchPhoto.populateExistingMatchPhotosList();
+    MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState();
+}
+
 MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
 {
     let matchPhotoListItemContainer = new FormIt.PluginUI.ExpandableListItem(matchPhotoObjectName);
     matchPhotoListItemContainer.element.setAttribute('title', 'Click to expand and view options for this item.');
 
     // set the expandable content container height
-    matchPhotoListItemContainer.setContentContainerHeight(120);
+    matchPhotoListItemContainer.setContentContainerHeight(180);
 
     // the second (last) element is the expandable content container
     let expandableContentContainer = matchPhotoListItemContainer.element.lastChild;
     
     // add the name input
-    let nameInputID = matchPhotoObjectName.replace(/\s/g, '') + 'InputID';
-    let photoObjectNameInputModule = new FormIt.PluginUI.TextInputModule('Material Name:', 'existingMatchPhotoNameForm', 'inputModuleContainer', nameInputID, function(){});
+    let nameInputID = matchPhotoObjectName.replace(/\s/g, '') + 'NameInput';
+    let photoObjectNameInputModule = new FormIt.PluginUI.TextInputModule('Material Name:', 'existingMatchPhotoNameForm', 'inputModuleContainer', nameInputID);
     let photoObjectNameInput = photoObjectNameInputModule.getInput();
     photoObjectNameInput.value = matchPhotoObjectName;
     photoObjectNameInput.disabled = true; // only editable in Match Photo mode
     photoObjectNameInput.setAttribute('title', 'Click "Edit" to change the material name.');
-
     expandableContentContainer.appendChild(photoObjectNameInputModule.element);
 
+    // add the camera plane distance input
+    let cameraPlaneDistanceInputID = matchPhotoObjectName.replace(/\s/g, '') + 'CameraPlaneDistanceInput';
+    let photoObjectCameraPlaneDistanceInputModule = new FormIt.PluginUI.TextInputModule('Camera Plane Distance:', 'existingMatchPhotoCameraPlaneDistanceForm', 'inputModuleContainer', cameraPlaneDistanceInputID);
+    let photoObjectCameraPlaneDistanceInput = photoObjectCameraPlaneDistanceInputModule.getInput();
+    photoObjectCameraPlaneDistanceInput.setAttribute('title', 'Click "Edit" to change the camera plane distance.');
+    photoObjectCameraPlaneDistanceInput.disabled = true; // only editable in Match Photo mode
+    // the camera plane distance must be retrieved from an attribute on the object
+    let args = { "photoObjectName" : matchPhotoObjectName };
+    window.FormItInterface.CallMethod("MatchPhoto.getCameraPlaneDistanceFromAttribute", args, function(result)
+    {
+
+        photoObjectCameraPlaneDistanceInput.value = JSON.parse(result);
+        
+    }); 
+    expandableContentContainer.appendChild(photoObjectCameraPlaneDistanceInputModule.element);
 
     // add a multi-module for the manage buttons to arrange horizontally
     let multiModuleContainer = new FormIt.PluginUI.MultiModuleContainer().element;
@@ -170,10 +233,11 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
         window.FormItInterface.CallMethod("MatchPhoto.updateCameraToMatchPhotoObject", args, function(result)
         {
             // then start Match Photo mode
-            MatchPhoto.startMatchPhotoModeForExistingObject(photoObjectNameInputModule.getInput().value);
+            MatchPhoto.startMatchPhotoModeForExistingObject(photoObjectNameInputModule.getInput().value, photoObjectCameraPlaneDistanceInputModule.getInput().value);
 
-            // set the active Match Photo name input to this one
+           // synchronize the active Match Photo name and camera plane distance inputs with these
             MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = photoObjectNameInputModule.getInput().value;
+            MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.getInput().value = photoObjectCameraPlaneDistanceInputModule.getInput().value;
         }); 
 
     });
@@ -288,14 +352,43 @@ MatchPhoto.layerVisibilityCheckboxOnClick = function()
     }); 
 }
 
+// populate the given text input element with the string equivalent of the value
+MatchPhoto.populateInputWithConvertedValueString = function(input, value)
+{
+    // if value is not a number, try converting to one
+    if (!Number(value))
+    {
+        let args = { "string" : value };
+        window.FormItInterface.CallMethod("MatchPhoto.convertStringToLinearValue", args, function(result)
+        {
+            let args = { "linearValue" : JSON.parse(result) };
+            window.FormItInterface.CallMethod("MatchPhoto.convertLinearValueToString", args, function(result)
+            {
+                input.getInput().value = JSON.parse(result);   
+            }); 
+        }); 
+    }
+    else
+    {
+        value = Number(value) ? value : MatchPhoto.defaultCameraPlaneDistance;
+
+        let args = { "linearValue" : value };
+        window.FormItInterface.CallMethod("MatchPhoto.convertLinearValueToString", args, function(result)
+        {
+            input.getInput().value = JSON.parse(result);   
+        }); 
+    }
+
+}
+
 // start a Match Photo session using the specified material name
-MatchPhoto.startMatchPhotoMode = function(matchPhotoObjectName)
+MatchPhoto.startMatchPhotoMode = function(matchPhotoObjectName, cameraPlaneDistance)
 {
     MatchPhoto.bIsMatchPhotoModeActive = true;
 
     MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI();
 
-    let args = { "bIsMatchPhotoModeActive" : MatchPhoto.bIsMatchPhotoModeActive, "matchPhotoObjectName" : matchPhotoObjectName };
+    let args = { "bIsMatchPhotoModeActive" : MatchPhoto.bIsMatchPhotoModeActive, "matchPhotoObjectName" : matchPhotoObjectName, "cameraPlaneDistance" : cameraPlaneDistance };
 
     // initialize the match photo object
     window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", args, function(result)
@@ -312,7 +405,7 @@ MatchPhoto.startMatchPhotoMode = function(matchPhotoObjectName)
 
 // start a Match Photo session for a new match photo
 // with checks for valid material name and material name already in use
-MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName)
+MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName, cameraPlaneDistance)
 {
     let args = { "matchPhotoObjectName" : matchPhotoObjectName };
 
@@ -329,7 +422,7 @@ MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName)
                 // only proceed if the given material name not used
                 if (JSON.parse(result) == false)
                 {
-                    MatchPhoto.startMatchPhotoMode(matchPhotoObjectName);
+                    MatchPhoto.startMatchPhotoMode(matchPhotoObjectName, cameraPlaneDistance);
                 }
             });    
         }   
@@ -338,7 +431,7 @@ MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName)
 
 // start a Match Photo session for an existing match photo object
 // with a check for valid material name
-MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName)
+MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName, cameraPlaneDistance)
 {
     let args = { "matchPhotoObjectName" : matchPhotoObjectName };
 
@@ -348,21 +441,21 @@ MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName)
         // only proceed if the given material name is valid
         if (JSON.parse(result) == true)
         {
-            MatchPhoto.startMatchPhotoMode(matchPhotoObjectName);    
+            MatchPhoto.startMatchPhotoMode(matchPhotoObjectName, cameraPlaneDistance);    
         }   
     });
 }
 
 // while Match Photo mode is running, rebuild the active object with the given settings
 // for example, specifying a new material or focal length
-MatchPhoto.rebuildMatchPhotoObject = function(oldMatchPhotoObjectName, newMatchPhotoObjectName)
+MatchPhoto.rebuildMatchPhotoObject = function(oldMatchPhotoObjectName, newMatchPhotoObjectName, cameraPlaneDistance)
 {
     let deleteArgs = { "photoObjectName" : oldMatchPhotoObjectName };
 
     // find the match photo object and delete it
     window.FormItInterface.CallMethod("MatchPhoto.deleteMatchPhotoObject", deleteArgs, function(result)
     {
-        let initializeArgs = { "matchPhotoObjectName" : newMatchPhotoObjectName };
+        let initializeArgs = { "matchPhotoObjectName" : newMatchPhotoObjectName, "cameraPlaneDistance" : cameraPlaneDistance };
 
         // initialize the new Match Photo object
         window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", initializeArgs, function(result)
@@ -381,7 +474,7 @@ MatchPhoto.rebuildMatchPhotoObject = function(oldMatchPhotoObjectName, newMatchP
 
 // the function used when the user is done editing the name or focal length field
 // first it checks whether the specified name is valid before continuing
-MatchPhoto.tryRebuildPhotoObject = function(oldMatchPhotoObjectName, newMatchPhotoObjectName)
+MatchPhoto.tryRebuildPhotoObject = function(oldMatchPhotoObjectName, newMatchPhotoObjectName, cameraPlaneDistance)
 {
     let args = { "matchPhotoObjectName" : newMatchPhotoObjectName };
 
@@ -398,7 +491,7 @@ MatchPhoto.tryRebuildPhotoObject = function(oldMatchPhotoObjectName, newMatchPho
                 // only proceed if the given material name not used
                 if (JSON.parse(result) == false)
                 {
-                    MatchPhoto.rebuildMatchPhotoObject(oldMatchPhotoObjectName, newMatchPhotoObjectName);
+                    MatchPhoto.rebuildMatchPhotoObject(oldMatchPhotoObjectName, newMatchPhotoObjectName, cameraPlaneDistance);
                 }
                 else
                 {
@@ -420,7 +513,7 @@ MatchPhoto.endMatchPhotoMode = function(matchPhotoObjectName)
 
     MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI();
 
-    let args = { "bIsMatchPhotoModeActive" : MatchPhoto.bIsMatchPhotoModeActive, "matchPhotoObjectName" : matchPhotoObjectName };
+    let args = { "bIsMatchPhotoModeActive" : MatchPhoto.bIsMatchPhotoModeActive, "matchPhotoObjectName" : matchPhotoObjectName, "cameraPlaneDistance" : MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.getInput().value };
 
     // start or stop subscribing to the camera changed message
     window.FormItInterface.CallMethod("MatchPhoto.toggleSubscribeToCameraChangedMessage", args, function(result)

@@ -8,10 +8,12 @@ MatchPhoto.photoContainerContextHistoryID = 0;
 
 // the active match photo object (found using the matching string attribute value)
 MatchPhoto.activeMatchPhotoObjectName = '';
+MatchPhoto.activeMatchPhotoCameraPlaneDistance = 5; // default value
 
 // string attribute keys for photo objects and their containers
 MatchPhoto.photoObjectContainerAttributeKey = 'FormIt::Plugins::MatchPhotoContainer';
 MatchPhoto.photoObjectAttributeKey = 'FormIt::Plugins::MatchPhotoObject';
+MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey = 'FormIt::Plugins::MatchPhotoCameraPlaneDistance';
 MatchPhoto.photoObjectOriginalAspectRatioAttributeKey = 'FormIt::Plugins::MatchPhotoOriginalAspectRatio';
 
 // the layer used to store photo objects and their container - so they can be locked
@@ -115,10 +117,13 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
     
         var aspectRatio = MatchPhoto.getMaterialAspectRatio(MatchPhoto.activeMatchPhotoObjectName);
     
-        var matchPhotoObjectInstanceID = ManageCameras.createCameraGeometryFromCameraData(matchPhotoObjectContainerHistoryID, cameraData, aspectRatio);
+        var matchPhotoObjectInstanceID = ManageCameras.createCameraGeometryFromCameraData(matchPhotoObjectContainerHistoryID, cameraData, aspectRatio, FormIt.StringConversion.StringToLinearValue(MatchPhoto.activeMatchPhotoCameraPlaneDistance).second);
 
         WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
             matchPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey, MatchPhoto.activeMatchPhotoObjectName);
+
+        WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
+            matchPhotoObjectInstanceID, MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey, MatchPhoto.activeMatchPhotoCameraPlaneDistance);
 
         //put the instance on a layer and lock the layer
         FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
@@ -277,6 +282,19 @@ MatchPhoto.restoreOriginalMaterialAspectRatioFromAttribute = function(nPhotoObje
     FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
 }
 
+MatchPhoto.getCameraPlaneDistanceFromAttribute = function(args)
+{
+    var photoObjectName = args.photoObjectName;
+
+    // get the photo object container history ID
+    var nPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
+
+    var nPhotoObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nPhotoObjectContainerHistoryID, photoObjectName);
+
+    // return the value converted to a dimension string in the current units
+    return WSM.Utils.GetStringAttributeForObject(nPhotoObjectContainerHistoryID, nPhotoObjectInstanceID, MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey).value;
+}
+
 MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
 {
     var nPhotoContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
@@ -312,6 +330,7 @@ MatchPhoto.initializeMatchPhotoObject = function(args)
 {
     // set the active match photo object to the one listed in args
     MatchPhoto.activeMatchPhotoObjectName = args.matchPhotoObjectName;
+    MatchPhoto.activeMatchPhotoCameraPlaneDistance = args.cameraPlaneDistance;
 
     MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
     MatchPhoto.paintActiveMatchPhotoObjectWithMaterial();
@@ -396,6 +415,20 @@ MatchPhoto.setMatchPhotoLayerVisibilityByArgs = function(args)
             FormIt.Layers.SetLayerVisibility(MatchPhoto.camerasContainerLayerName, false);
         }
     }
+}
+
+MatchPhoto.convertLinearValueToString = function(args)
+{
+    var value = Number(args.linearValue);
+
+    return FormIt.StringConversion.LinearValueToString(value);
+}
+
+MatchPhoto.convertStringToLinearValue = function(args)
+{
+    var string = args.string;
+    
+    return FormIt.StringConversion.StringToLinearValue(string).second;
 }
 
 /*** set up message listeners and execute functions based on FormIt messages ***/
