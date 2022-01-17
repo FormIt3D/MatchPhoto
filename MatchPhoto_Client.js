@@ -19,6 +19,9 @@ MatchPhoto.photoObjectOriginalAspectRatioAttributeKey = 'FormIt::Plugins::MatchP
 // the layer used to store photo objects and their container - so they can be locked
 MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
 
+// the default opacity multiplier (0-1) for materials used as photos
+MatchPhoto.defaultOpacityMultiplier = 0.5;
+
 // the active notification handle - needs to be cleared so messages don't stack
 MatchPhoto.activeNotificationHandle = undefined;
 
@@ -315,12 +318,19 @@ MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
         var originalAspectRatio = MatchPhoto.getMaterialAspectRatio(materialName);
         MatchPhoto.setOriginalMaterialAspectRatioAsAttribute(nPhotoContainerHistoryID, nPhotoObjectInstanceID, originalAspectRatio);
 
+        // get the data for the specified material
+        var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
+
+        // set the opacity
+        materialData.Data.Color.a = Math.round((255 * MatchPhoto.defaultOpacityMultiplier));
+
         // make sure the material is set to 2' x 2'
         // because of the way the camera object is made (-1 unit to 1 unit across origin),
         // the material must be this size to fit the camera plane
-        var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
         materialData.Data.Scale.x = 2;
         materialData.Data.Scale.y = 2;
+
+        // apply the changes to the material
         FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
 
         // paint the face in the camera object
