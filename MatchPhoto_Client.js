@@ -304,24 +304,29 @@ MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
     var photoFaceObjectHistoryID = MatchPhoto.getPhotoObjectFaceObjectHistoryIDForMaterial(nPhotoContainerHistoryID, nPhotoObjectInstanceID);
 
     // look for and apply the material to the camera object
-    // (hard-coded for now)
     var materialName = MatchPhoto.activeMatchPhotoObjectName;
     var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
 
-    // record the original aspect ratio from the material
-    var originalAspectRatio = MatchPhoto.getMaterialAspectRatio(materialName);
-    MatchPhoto.setOriginalMaterialAspectRatioAsAttribute(nPhotoContainerHistoryID, nPhotoObjectInstanceID, originalAspectRatio);
+    // only proceed if the given photo face object history ID 
+    // is not already painted with the material
+    if (FormIt.SketchMaterials.GetMaterialIDsFromObjects(photoFaceObjectHistoryID)[0] != materialID)
+    {
+        // record the original aspect ratio from the material
+        var originalAspectRatio = MatchPhoto.getMaterialAspectRatio(materialName);
+        MatchPhoto.setOriginalMaterialAspectRatioAsAttribute(nPhotoContainerHistoryID, nPhotoObjectInstanceID, originalAspectRatio);
 
-    // make sure the material is set to 2' x 2'
-    // because of the way the camera object is made (-1 unit to 1 unit across origin),
-    // the material must be this size to fit the camera plane
-    var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
-    materialData.Data.Scale.x = 2;
-    materialData.Data.Scale.y = 2;
-    FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
+        // make sure the material is set to 2' x 2'
+        // because of the way the camera object is made (-1 unit to 1 unit across origin),
+        // the material must be this size to fit the camera plane
+        var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
+        materialData.Data.Scale.x = 2;
+        materialData.Data.Scale.y = 2;
+        FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
 
-    // paint the face in the camera object
-    FormIt.SketchMaterials.AssignMaterialToObjects(materialID, photoFaceObjectHistoryID);
+        // paint the face in the camera object
+        FormIt.SketchMaterials.AssignMaterialToObjects(materialID, photoFaceObjectHistoryID);
+    }
+
 }
 
 // for new match photos, need to initialize them

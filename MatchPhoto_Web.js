@@ -455,20 +455,22 @@ MatchPhoto.rebuildMatchPhotoObject = function(oldMatchPhotoObjectName, newMatchP
     // find the match photo object and delete it
     window.FormItInterface.CallMethod("MatchPhoto.deleteMatchPhotoObject", deleteArgs, function(result)
     {
-        let initializeArgs = { "matchPhotoObjectName" : newMatchPhotoObjectName, "cameraPlaneDistance" : cameraPlaneDistance };
 
-        // initialize the new Match Photo object
-        window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", initializeArgs, function(result)
-        {
-    
-        });
+    });
 
-        // for some reason, the first initialization results in the photo painted upside-down
-        // so call the update function to fix this
-        window.FormItInterface.CallMethod("MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera", { }, function(result)
-        {
-    
-        });
+    let initializeArgs = { "matchPhotoObjectName" : newMatchPhotoObjectName, "cameraPlaneDistance" : cameraPlaneDistance };
+
+    // initialize the new Match Photo object
+    window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", initializeArgs, function(result)
+    {
+
+    });
+
+    // for some reason, the first initialization results in the photo painted upside-down
+    // so call the update function to fix this
+    window.FormItInterface.CallMethod("MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera", { }, function(result)
+    {
+
     });
 }
 
