@@ -133,6 +133,17 @@ MatchPhoto.initializeUI = function()
     });
     activeMatchPhotoModeContainer.appendChild(MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.element);
 
+    // reset the camera to the initial state
+    let resetCameraChangesButton = new FormIt.PluginUI.Button('Reset Camera', function()
+    {
+        window.FormItInterface.CallMethod("MatchPhoto.resetCameraToInitialState", args, function(result)
+        {
+
+        }); 
+    });
+    resetCameraChangesButton.element.setAttribute('title', 'Discard camera changes made during this editing session, and revert to the original camera state.');
+    activeMatchPhotoModeContainer.appendChild(resetCameraChangesButton.element);
+
     // end the active match photo session
     let endMatchPhotoModeButton = new FormIt.PluginUI.Button('Done Editing', function()
     {

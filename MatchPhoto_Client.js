@@ -10,6 +10,9 @@ MatchPhoto.photoContainerContextHistoryID = 0;
 MatchPhoto.activeMatchPhotoObjectName = '';
 MatchPhoto.activeMatchPhotoCameraPlaneDistance = 5; // default value
 
+// the original camera state when Edit mode starts
+MatchPhoto.initialCameraData = undefined;
+
 // string attribute keys for photo objects and their containers
 MatchPhoto.photoObjectContainerAttributeKey = 'FormIt::Plugins::MatchPhotoContainer';
 MatchPhoto.photoObjectAttributeKey = 'FormIt::Plugins::MatchPhotoObject';
@@ -347,8 +350,17 @@ MatchPhoto.initializeMatchPhotoObject = function(args)
     MatchPhoto.activeMatchPhotoObjectName = args.matchPhotoObjectName;
     MatchPhoto.activeMatchPhotoCameraPlaneDistance = args.cameraPlaneDistance;
 
+    // record the current camera data so the user can return to it later in Edit mode
+    MatchPhoto.initialCameraData = FormIt.Cameras.GetCameraData();
+
     MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
     MatchPhoto.paintActiveMatchPhotoObjectWithMaterial();
+}
+
+// reset the camera to the original state before Edit mode was invoked
+MatchPhoto.resetCameraToInitialState = function()
+{
+    FormIt.Cameras.SetCameraData(MatchPhoto.initialCameraData);
 }
 
 // check if the given material name is available in the sketch
