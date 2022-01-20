@@ -8,14 +8,16 @@ MatchPhoto.photoContainerContextHistoryID = 0;
 
 // the active match photo object (found using the matching string attribute value)
 MatchPhoto.activeMatchPhotoObjectName = '';
+MatchPhoto.activeMatchPhotoMaterialID = 0;
 MatchPhoto.activeMatchPhotoCameraPlaneDistance = 5; // default value
 
 // the original camera state when Edit mode starts
 MatchPhoto.initialCameraData = undefined;
 
-// string attribute keys for photo objects and their containers
+// string attribute keys for photo objects and their container
 MatchPhoto.photoObjectContainerAttributeKey = 'FormIt::Plugins::MatchPhotoContainer';
 MatchPhoto.photoObjectAttributeKey = 'FormIt::Plugins::MatchPhotoObject';
+MatchPhoto.photoObjectMaterialIDAttributeKey = 'FormIt::Plugins::MatchPhotoMaterialID';
 MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey = 'FormIt::Plugins::MatchPhotoCameraPlaneDistance';
 MatchPhoto.photoObjectOriginalAspectRatioAttributeKey = 'FormIt::Plugins::MatchPhotoOriginalAspectRatio';
 
@@ -127,6 +129,9 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
 
         WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
             matchPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey, MatchPhoto.activeMatchPhotoObjectName);
+
+        WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
+            matchPhotoObjectInstanceID, MatchPhoto.photoObjectMaterialIDAttributeKey, MatchPhoto.activeMatchPhotoMaterialID.toString());
 
         WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
             matchPhotoObjectInstanceID, MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey, MatchPhoto.activeMatchPhotoCameraPlaneDistance);
@@ -301,6 +306,43 @@ MatchPhoto.getCameraPlaneDistanceFromAttribute = function(args)
     return WSM.Utils.GetStringAttributeForObject(nPhotoObjectContainerHistoryID, nPhotoObjectInstanceID, MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey).value;
 }
 
+MatchPhoto.getMaterialIDFromAttribute = function(args)
+{
+    // use the name to find the photo object
+    var photoObjectName = args.matchPhotoObjectName;
+
+    // get the photo object container history ID
+    var nPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
+
+    var nPhotoObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nPhotoObjectContainerHistoryID, photoObjectName);
+
+    return WSM.Utils.GetStringAttributeForObject(nPhotoObjectContainerHistoryID, nPhotoObjectInstanceID, MatchPhoto.photoObjectMaterialIDAttributeKey).value;
+}
+
+// updates the name attribute and returns the name for the HTML side to use
+MatchPhoto.updateMaterialNameAttributeFromID = function(args)
+{
+    var originalMaterialName = args.originalMaterialName;
+    var materialID = args.materialID;
+
+    // get the latest material name from the ID
+    var newMaterialName = FormIt.MaterialProvider.GetMaterialName(FormIt.LibraryType.SKETCH, materialID).Name;
+
+    // update the active match photo name with the new one
+    MatchPhoto.activeMatchPhotoObjectName = newMaterialName;
+
+    // get the photo object container history ID
+    var nPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
+
+    var nPhotoObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nPhotoObjectContainerHistoryID, originalMaterialName);
+
+    // update the string attribute on the object with the new name
+    WSM.Utils.SetOrCreateStringAttributeForObject(nPhotoObjectContainerHistoryID,
+        nPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey, newMaterialName);
+
+    return newMaterialName;
+}
+
 MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
 {
     var nPhotoContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
@@ -346,8 +388,9 @@ MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
 // by creating the photo object and painting it with the correct material
 MatchPhoto.initializeMatchPhotoObject = function(args)
 {
-    // set the active match photo object to the one listed in args
+    // set the active match photo object data to that listed in args
     MatchPhoto.activeMatchPhotoObjectName = args.matchPhotoObjectName;
+    MatchPhoto.activeMatchPhotoMaterialID = MatchPhoto.getInSketchMaterialIDFromName(args.matchPhotoObjectName);
     MatchPhoto.activeMatchPhotoCameraPlaneDistance = args.cameraPlaneDistance;
 
     // record the current camera data so the user can return to it later in Edit mode
@@ -378,6 +421,21 @@ MatchPhoto.getIsMaterialNameValid = function(args)
     {
         MatchPhoto.dismissActiveNotification(MatchPhoto.activeNotificationHandle);
         MatchPhoto.activeNotificationHandle = FormIt.UI.ShowNotification('No material found with that name. \nSpecify a valid material name and try again.', FormIt.NotificationType.Error, 0);
+        return false;
+    }
+}
+
+// check if the given material name is available in the sketch
+MatchPhoto.getIsMaterialIDValid = function(materialID)
+{
+    if (FormIt.MaterialProvider.GetIsMaterialValid(FormIt.LibraryType.SKETCH, materialID))
+    {
+        return true;
+    }
+    else
+    {
+        MatchPhoto.dismissActiveNotification(MatchPhoto.activeNotificationHandle);
+        MatchPhoto.activeNotificationHandle = FormIt.UI.ShowNotification('The material previously used for this photo has been deleted. \nPlease specify a new material name.', FormIt.NotificationType.Error, 0);
         return false;
     }
 }

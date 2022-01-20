@@ -427,13 +427,28 @@ MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName, came
         if (JSON.parse(result) == true)
         {
             // then, check that the given material name isn't already in use
-            // first, check if the given photo object name (material name) is valid
             window.FormItInterface.CallMethod("MatchPhoto.getIsMaterialNameAlreadyUsedForMatchPhoto", args, function(result)
             {
                 // only proceed if the given material name not used
                 if (JSON.parse(result) == false)
                 {
-                    MatchPhoto.startMatchPhotoMode(matchPhotoObjectName, cameraPlaneDistance);
+                    MatchPhoto.bIsMatchPhotoModeActive = true;
+
+                    MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI();
+                
+                    let args = { "bIsMatchPhotoModeActive" : MatchPhoto.bIsMatchPhotoModeActive, "matchPhotoObjectName" : matchPhotoObjectName, "cameraPlaneDistance" : cameraPlaneDistance };
+                
+                    // initialize the match photo object
+                    window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", args, function(result)
+                    {
+                
+                    });
+                
+                    // start or stop subscribing to the camera changed message
+                    window.FormItInterface.CallMethod("MatchPhoto.toggleSubscribeToCameraChangedMessage", args, function(result)
+                    {
+                
+                    });
                 }
             });    
         }   
@@ -443,17 +458,30 @@ MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName, came
 // start a Match Photo session for an existing match photo object
 // with a check for valid material name
 MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName, cameraPlaneDistance)
-{
+{    
     let args = { "matchPhotoObjectName" : matchPhotoObjectName };
 
-    // first, check if the given photo object name (material name) is valid
-    window.FormItInterface.CallMethod("MatchPhoto.getIsMaterialNameValid", args, function(result)
+    // get the material ID from the object attribute
+    window.FormItInterface.CallMethod("MatchPhoto.getMaterialIDFromAttribute", args, function(result)
     {
-        // only proceed if the given material name is valid
-        if (JSON.parse(result) == true)
+        let args = { "originalMaterialName" : matchPhotoObjectName, "materialID" : JSON.parse(result) };
+
+        // get the updated material name from the ID
+        window.FormItInterface.CallMethod("MatchPhoto.updateMaterialNameAttributeFromID", args, function(result)
         {
-            MatchPhoto.startMatchPhotoMode(matchPhotoObjectName, cameraPlaneDistance);    
-        }   
+            let newMaterialName = JSON.parse(result);
+            // only proceed if the given material name is valid
+            if (newMaterialName)
+            {
+                MatchPhoto.startMatchPhotoMode(newMaterialName, cameraPlaneDistance);
+                MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = newMaterialName;
+            }
+            // otherwise, this material was probably deleted
+            else
+            {
+                
+            }
+        });
     });
 }
 
