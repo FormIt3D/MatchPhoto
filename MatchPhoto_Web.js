@@ -432,23 +432,7 @@ MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName, came
                 // only proceed if the given material name not used
                 if (JSON.parse(result) == false)
                 {
-                    MatchPhoto.bIsMatchPhotoModeActive = true;
-
-                    MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI();
-                
-                    let args = { "bIsMatchPhotoModeActive" : MatchPhoto.bIsMatchPhotoModeActive, "matchPhotoObjectName" : matchPhotoObjectName, "cameraPlaneDistance" : cameraPlaneDistance };
-                
-                    // initialize the match photo object
-                    window.FormItInterface.CallMethod("MatchPhoto.initializeMatchPhotoObject", args, function(result)
-                    {
-                
-                    });
-                
-                    // start or stop subscribing to the camera changed message
-                    window.FormItInterface.CallMethod("MatchPhoto.toggleSubscribeToCameraChangedMessage", args, function(result)
-                    {
-                
-                    });
+                    MatchPhoto.startMatchPhotoMode(matchPhotoObjectName, cameraPlaneDistance);
                 }
             });    
         }   
@@ -456,7 +440,7 @@ MatchPhoto.startMatchPhotoModeForNewObject = function(matchPhotoObjectName, came
 }
 
 // start a Match Photo session for an existing match photo object
-// with a check for valid material name
+// and get the updated material name if it's been renamed since this object was created
 MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName, cameraPlaneDistance)
 {    
     let args = { "matchPhotoObjectName" : matchPhotoObjectName };
@@ -470,6 +454,7 @@ MatchPhoto.startMatchPhotoModeForExistingObject = function(matchPhotoObjectName,
         window.FormItInterface.CallMethod("MatchPhoto.updateMaterialNameAttributeFromID", args, function(result)
         {
             let newMaterialName = JSON.parse(result);
+
             // only proceed if the given material name is valid
             if (newMaterialName)
             {
