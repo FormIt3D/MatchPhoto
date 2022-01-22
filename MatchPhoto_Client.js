@@ -257,6 +257,20 @@ MatchPhoto.getInSketchMaterialIDFromName = function(materialName)
     }
 }
 
+MatchPhoto.getAllInSketchMaterialNames = function()
+{
+    var allMaterialIDs = FormIt.MaterialProvider.GetMaterials(FormIt.LibraryType.SKETCH);
+    var allMaterialNames = [];
+
+    for(var i = 0; i < allMaterialIDs.length; i++)
+    {
+        var name = FormIt.MaterialProvider.GetMaterialName(FormIt.LibraryType.SKETCH, allMaterialIDs[i]).Name;
+        allMaterialNames.push(name);
+    }
+
+    return allMaterialNames;
+}
+
 MatchPhoto.getMaterialAspectRatio = function(materialName)
 {
     var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
@@ -466,7 +480,8 @@ MatchPhoto.getMatchPhotoLayerVisibilityState = function()
 {
     var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
 
-    if (layerID)
+    // make sure the layer is not invalid (this number means it wasn't found)
+    if (layerID != 4294967295)
     {
         var layerData = FormIt.Layers.GetLayerData(layerID);
         var bIsLayerVisible = layerData.Visible;

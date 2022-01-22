@@ -12,8 +12,9 @@ MatchPhoto.activeMatchPhotoModeContainerID = 'activeMatchPhotoModeContainer';
 MatchPhoto.layerVisibilityCheckbox = undefined;
 MatchPhoto.layerVisibilityCheckboxID = 'enableMatchPhotoCheckbox';
 
-MatchPhoto.newMatchPhotoMaterialNameInput = undefined;
-MatchPhoto.newMatchPhotoMaterialNameInputID = 'newMatchPhotoMaterialNameInput';
+MatchPhoto.newMatchPhotoMaterialSelectInput = undefined;
+MatchPhoto.newMatchPhotoMaterialSelectInputID = 'newMatchPhotoMaterialSelectList';
+MatchPhoto.defaultSelectInputOptionText = 'Choose a material to use as a photo...';
 
 MatchPhoto.newMatchPhotoCameraPlaneDistanceInput = undefined;
 MatchPhoto.newMatchPhotoCameraPlaneDistanceInputID = 'newMatchPhotoCameraPlaneDistanceInput';
@@ -60,10 +61,11 @@ MatchPhoto.initializeUI = function()
     let createNewMatchPhotoSubheader = new FormIt.PluginUI.HeaderModule('Create New', 'Start Match Photo Mode with the specified material used as a photograph overlaid on the screen.', 'headerContainer');
     inactiveMatchPhotoModeContainer.appendChild(createNewMatchPhotoSubheader.element);
 
-    // the name input
-    MatchPhoto.newMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name:', 'newMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID);
-    MatchPhoto.newMatchPhotoMaterialNameInput.getInput().setAttribute('placeholder', 'Enter material name to use as photo...');
-    inactiveMatchPhotoModeContainer.appendChild(MatchPhoto.newMatchPhotoMaterialNameInput.element);
+    // the name select element
+    MatchPhoto.newMatchPhotoMaterialSelectInput = new FormIt.PluginUI.SelectInputModule('Material:', MatchPhoto.defaultSelectInputOptionText);
+    // populate the list with the available material names
+    MatchPhoto.populateSelectElementWithInSketchMaterials(MatchPhoto.newMatchPhotoMaterialSelectInput); 
+    inactiveMatchPhotoModeContainer.appendChild(MatchPhoto.newMatchPhotoMaterialSelectInput.element);
 
     // the camera plane distance input
     MatchPhoto.newMatchPhotoCameraPlaneDistanceInput = new FormIt.PluginUI.TextInputModule('Camera Plane Distance:', 'newMatchPhotoCameraPlaneDistanceInputModule', 'inputModuleContainer', MatchPhoto.newMatchPhotoCameraPlaneDistanceInputID, function()
@@ -78,10 +80,10 @@ MatchPhoto.initializeUI = function()
 
     let startNewMatchPhotoButton = new FormIt.PluginUI.ButtonWithTooltip('Create New Match Photo', 'Start Match Photo Mode with the specified material used as a photograph overlaid on the screen.', function()
     {
-        MatchPhoto.startMatchPhotoModeForNewObject(MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value, MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().value);
+        MatchPhoto.startMatchPhotoModeForNewObject(MatchPhoto.newMatchPhotoMaterialSelectInput.getInput().value, MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().value);
 
         // synchronize the active Match Photo name and camera plane distance inputs with these
-        MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value;
+        MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value = MatchPhoto.newMatchPhotoMaterialSelectInput.getInput().value;
         MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.getInput().value = MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().value;
     });
     inactiveMatchPhotoModeContainer.appendChild(startNewMatchPhotoButton.element);
@@ -118,7 +120,7 @@ MatchPhoto.initializeUI = function()
     activeMatchPhotoModeContainer.appendChild(activeMatchPhotoSubheader.element);
 
     // create the name input so the Match Photo material can be changed
-    MatchPhoto.activeMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name:', 'activeMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialNameInputID, function()
+    MatchPhoto.activeMatchPhotoMaterialNameInput = new FormIt.PluginUI.TextInputModule('Material Name:', 'activeMatchPhotoMaterialNameInputModule', 'inputModuleContainerTop', MatchPhoto.newMatchPhotoMaterialSelectInputID, function()
     {
         MatchPhoto.tryRebuildPhotoObject(MatchPhoto.activeMatchPhotoMaterialNameInput.existingInputValue, MatchPhoto.activeMatchPhotoMaterialNameInput.getInput().value);
     });
@@ -147,9 +149,9 @@ MatchPhoto.initializeUI = function()
     // end the active match photo session
     let endMatchPhotoModeButton = new FormIt.PluginUI.Button('Done Editing', function()
     {
-        let photoObjectName = document.getElementById(MatchPhoto.newMatchPhotoMaterialNameInputID).value;
+        let photoObjectName = document.getElementById(MatchPhoto.newMatchPhotoMaterialSelectInputID).value;
 
-        MatchPhoto.newMatchPhotoMaterialNameInput.getInput().value = '';
+        MatchPhoto.newMatchPhotoMaterialSelectInput.getInput().value = MatchPhoto.defaultSelectInputOptionText;
         MatchPhoto.endMatchPhotoMode(photoObjectName);
     });
     activeMatchPhotoModeContainer.appendChild(endMatchPhotoModeButton.element);
@@ -174,6 +176,7 @@ MatchPhoto.updateUI = function()
 
     // update other UI elements
     MatchPhoto.populateExistingMatchPhotosList();
+    MatchPhoto.populateSelectElementWithInSketchMaterials(MatchPhoto.newMatchPhotoMaterialSelectInput);
     MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState();
 }
 
@@ -289,6 +292,14 @@ MatchPhoto.clearExistingMatchPhotosList = function()
 
     // add the zero-state label back
     listContainer.appendChild(zeroStateChild);
+}
+
+MatchPhoto.populateSelectElementWithInSketchMaterials = function(selectElement)
+{
+    window.FormItInterface.CallMethod("MatchPhoto.getAllInSketchMaterialNames", { }, function(result)
+    {
+        selectElement.populateSelectList(JSON.parse(result));
+    });
 }
 
 MatchPhoto.populateExistingMatchPhotosList = function()
