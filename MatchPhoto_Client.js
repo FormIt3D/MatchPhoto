@@ -127,7 +127,7 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
     
         var matchPhotoObjectInstanceID = ManageCameras.createCameraGeometryFromCameraData(matchPhotoObjectContainerHistoryID, cameraData, aspectRatio, FormIt.StringConversion.StringToLinearValue(MatchPhoto.activeMatchPhotoCameraPlaneDistance).second);
         // set the instance name as active Match Photo name
-        WSM.APISetObjectProperties(matchPhotoObjectContainerHistoryID, matchPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey + " " + MatchPhoto.activeMatchPhotoObjectName, false);
+        WSM.APISetObjectProperties(matchPhotoObjectContainerHistoryID, matchPhotoObjectInstanceID, "Match Photo Plugin - " + MatchPhoto.activeMatchPhotoObjectName, false);
 
         WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
             matchPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey, MatchPhoto.activeMatchPhotoObjectName);
