@@ -73,6 +73,7 @@ MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID,
             FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
             var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
             FormIt.Layers.SetLayerPickable(layerID, false);
+            FormIt.Layers.SetLoadInRevit(camerasLayerID, false);
             FormIt.Layers.AssignLayerToObjects(layerID, matchPhotoContainerInstanceID);
 
             return matchPhotoContainerHistoryID;
