@@ -56,6 +56,11 @@ MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID,
 
             var matchPhotoContainerInstanceID = WSM.APIGetObjectsByTypeReadOnly(nContextHistoryID, matchPhotoContainerGroupID, WSM.nObjectType.nInstanceType)[0];
 
+            // add a name for the group history
+            WSM.APISetRevitFamilyInformation(matchPhotoContainerHistoryID, false, false, "", MatchPhoto.photoObjectContainerGroupInstanceName, "", "");
+            // add a name for the group instance
+            WSM.APISetObjectProperties(MatchPhoto.photoContainerContextHistoryID, matchPhotoContainerInstanceID, MatchPhoto.photoObjectContainerGroupInstanceName, false);
+
             // add the string attribute for the container
             WSM.Utils.SetOrCreateStringAttributeForObject(nContextHistoryID,
                 matchPhotoContainerInstanceID, MatchPhoto.photoObjectContainerAttributeKey, "");
@@ -126,8 +131,13 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
         var aspectRatio = MatchPhoto.getMaterialAspectRatio(MatchPhoto.activeMatchPhotoObjectName);
     
         var matchPhotoObjectInstanceID = ManageCameras.createCameraGeometryFromCameraData(matchPhotoObjectContainerHistoryID, cameraData, aspectRatio, FormIt.StringConversion.StringToLinearValue(MatchPhoto.activeMatchPhotoCameraPlaneDistance).second);
-        // set the instance name as active Match Photo name
-        WSM.APISetObjectProperties(matchPhotoObjectContainerHistoryID, matchPhotoObjectInstanceID, "Match Photo Plugin - " + MatchPhoto.activeMatchPhotoObjectName, false);
+
+        var matchPhotoObjectHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(matchPhotoObjectContainerHistoryID, matchPhotoObjectInstanceID);
+
+        // add a name for the group history
+        WSM.APISetRevitFamilyInformation(matchPhotoObjectHistoryID, false, false, "", MatchPhoto.photoObjectGroupInstanceNamePrefix + MatchPhoto.activeMatchPhotoObjectName, "", "");
+        // add a name for the group instance
+        WSM.APISetObjectProperties(matchPhotoObjectContainerHistoryID, matchPhotoObjectInstanceID, MatchPhoto.photoObjectGroupInstanceNamePrefix + MatchPhoto.activeMatchPhotoObjectName, false);
 
         WSM.Utils.SetOrCreateStringAttributeForObject(matchPhotoObjectContainerHistoryID,
             matchPhotoObjectInstanceID, MatchPhoto.photoObjectAttributeKey, MatchPhoto.activeMatchPhotoObjectName);
