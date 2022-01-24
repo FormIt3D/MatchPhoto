@@ -14,12 +14,16 @@ MatchPhoto.activeMatchPhotoCameraPlaneDistance = 5; // default value
 // the original camera state when Edit mode starts
 MatchPhoto.initialCameraData = undefined;
 
-// string attribute keys for photo objects and their container
-MatchPhoto.photoObjectContainerAttributeKey = 'FormIt::Plugins::MatchPhotoContainer';
-MatchPhoto.photoObjectAttributeKey = 'FormIt::Plugins::MatchPhotoObject';
-MatchPhoto.photoObjectMaterialIDAttributeKey = 'FormIt::Plugins::MatchPhotoMaterialID';
-MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey = 'FormIt::Plugins::MatchPhotoCameraPlaneDistance';
-MatchPhoto.photoObjectOriginalAspectRatioAttributeKey = 'FormIt::Plugins::MatchPhotoOriginalAspectRatio';
+// group and instance names for the Match Photo objects and container
+MatchPhoto.photoObjectContainerGroupInstanceName = 'Match Photo Plugin - Photo Objects Container';
+MatchPhoto.photoObjectGroupInstanceNamePrefix = 'Match Photo Plugin - Photo Object - '; // will get the object name as the suffix later
+
+// string attribute keys for Match Photo objects and their container
+MatchPhoto.photoObjectContainerAttributeKey = 'FormIt::Plugins::MatchPhoto::PhotoObjectsContainer';
+MatchPhoto.photoObjectAttributeKey = 'FormIt::Plugins::MatchPhoto::PhotoObject::MaterialName';
+MatchPhoto.photoObjectMaterialIDAttributeKey = 'FormIt::Plugins::MatchPhoto::PhotoObject::MaterialID';
+MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey = 'FormIt::Plugins::MatchPhoto::PhotoObject::CameraPlaneDistance';
+MatchPhoto.photoObjectOriginalAspectRatioAttributeKey = 'FormIt::Plugins::MatchPhoto::PhotoObject::OriginalAspectRatio';
 
 // the layer used to store photo objects and their container - so they can be locked
 MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
