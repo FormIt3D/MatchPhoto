@@ -1,0 +1,54 @@
+<html>
+<head>
+    <title>Manage Cameras</title>
+    <META NAME="Title" CONTENT="Match Photo">
+    <META NAME="Author" CONTENT="Autodesk FormIt">
+        
+    <!-- for testing shared files locally, use: ../../SharedPluginUtilities/ -->
+    <!-- interface with FormIt -->
+    <script type="text/javascript" src="https://formit3d.github.io/SharedPluginUtilities/v23_0/FormItInterface.js"></script>
+    <!-- UI and styling -->
+    <script type="text/javascript" src="../../SharedPluginUtilities/FormItPluginUI.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../SharedPluginUtilities/FormItPluginStyling.css">
+    <!-- plugin scripts -->
+    <script type="text/javascript" src="MatchPhoto_Web.js"></script>
+    <script type="text/javascript">
+        FormItInterface.Initialize(function () {
+
+            // initialize the UI
+            // this must be called from here, to ensure the HTML page is loaded
+            // before scripts try to access the window document
+            MatchPhoto.initializeUI();
+
+            // on new sketch, update the UI to capture units and photo objects
+            FormItInterface.SubscribeMessage("FormIt.Message.kNewModelRequested", function(msg)
+            {
+                MatchPhoto.updateUI();
+            });
+
+            // on open file, update the UI to capture units and photo objects
+            FormItInterface.SubscribeMessage("FormIt.Message.kLoadComplete", function(msg)
+            {
+                MatchPhoto.updateUI();
+            });
+
+            // when layer visibility changes
+            // update the checkbox in the UI to match layer visibility state
+            FormItInterface.SubscribeMessage("FormIt.Message.kLayerVisibilityChanged", function(msg)
+            {
+                MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState();
+            });
+
+            // when units are changed, update the UI
+            // to reflect the new units in dimension boxes
+            FormItInterface.SubscribeMessage("FormIt.Message.kUnitTypeChanged", function(msg)
+            {
+                MatchPhoto.updateUI();
+            });
+
+        }); // DOMContentLoaded
+    </script>
+</head>
+<body> 
+</body>
+</html>
