@@ -1,6 +1,13 @@
-[
+[    
     {
-        "version":{
+        "version": {
+            "major":0,
+            "minor":0
+        },
+        "path":"v0_0"
+    },
+    {
+        "version": {
             "major":23,
             "minor":0
         },
