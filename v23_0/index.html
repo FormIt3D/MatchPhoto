@@ -39,6 +39,13 @@
                 MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState();
             });
 
+            // when the material manager changes (like materials are reordered or renamed),
+            // update the UI to correctly reflect the new material manager state
+            FormItInterface.SubscribeMessage("FormIt.Message.kMaterialManagerChanged", function(msg)
+            {
+                MatchPhoto.updateUI();
+            });
+
             // when units are changed, update the UI
             // to reflect the new units in dimension boxes
             FormItInterface.SubscribeMessage("FormIt.Message.kUnitTypeChanged", function(msg)
