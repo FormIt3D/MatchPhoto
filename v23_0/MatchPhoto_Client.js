@@ -290,8 +290,8 @@ MatchPhoto.getAllInSketchMaterialNames = function()
 
 MatchPhoto.getMaterialAspectRatio = function(materialName)
 {
-    var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
-    var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
+    var nMaterialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
+    var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, nMaterialID, true);
 
     var aspectRatio = materialData.Data.Scale.x / materialData.Data.Scale.y;
     
@@ -314,14 +314,14 @@ MatchPhoto.restoreOriginalMaterialAspectRatioFromAttribute = function(nPhotoObje
     // get the original aspect ratio from the instance attribute
     var originalAspectRatio = MatchPhoto.getOriginalMaterialAspectRatioFromAttribute(nPhotoObjectContextHistoryID, nPhotoObjectInstanceID);
 
-    var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
-    var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
+    var nMaterialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
+    var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, nMaterialID, true);
 
     // keep the x scale the same, but change the Y scale based on the aspect ratio
     var newMaterialScaleY = materialData.Data.Scale.y * (1 / originalAspectRatio);
 
     materialData.Data.Scale.y = newMaterialScaleY;
-    FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
+    FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, nMaterialID, materialData.Data, true);
 }
 
 MatchPhoto.getCameraPlaneDistanceFromAttribute = function(args)
@@ -354,10 +354,10 @@ MatchPhoto.getMaterialIDFromAttribute = function(args)
 MatchPhoto.updateMaterialNameAttributeFromID = function(args)
 {
     var originalMaterialName = args.originalMaterialName;
-    var materialID = args.materialID;
+    var nMaterialID = args.materialID;
 
     // get the latest material name from the ID
-    var newMaterialName = FormIt.MaterialProvider.GetMaterialName(FormIt.LibraryType.SKETCH, materialID).Name;
+    var newMaterialName = FormIt.MaterialProvider.GetMaterialName(FormIt.LibraryType.SKETCH, nMaterialID).Name;
 
     // update the active match photo name with the new one
     MatchPhoto.activeMatchPhotoObjectName = newMaterialName;
@@ -380,22 +380,22 @@ MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
 
     var nPhotoObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(nPhotoContainerHistoryID, MatchPhoto.activeMatchPhotoObjectName);
 
-    var photoFaceObjectHistoryID = MatchPhoto.getPhotoObjectFaceObjectHistoryIDForMaterial(nPhotoContainerHistoryID, nPhotoObjectInstanceID);
+    var nPhotoFaceObjectHistoryID = MatchPhoto.getPhotoObjectFaceObjectHistoryIDForMaterial(nPhotoContainerHistoryID, nPhotoObjectInstanceID);
 
     // look for and apply the material to the camera object
     var materialName = MatchPhoto.activeMatchPhotoObjectName;
-    var materialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
+    var nMaterialID = MatchPhoto.getInSketchMaterialIDFromName(materialName);
 
     // only proceed if the given photo face object history ID 
     // is not already painted with the material
-    if (FormIt.SketchMaterials.GetMaterialIDsFromObjects(photoFaceObjectHistoryID)[0] != materialID)
+    if (FormIt.SketchMaterials.GetMaterialIDsFromObjects(nPhotoFaceObjectHistoryID)[0] != nMaterialID)
     {
         // record the original aspect ratio from the material
         var originalAspectRatio = MatchPhoto.getMaterialAspectRatio(materialName);
         MatchPhoto.setOriginalMaterialAspectRatioAsAttribute(nPhotoContainerHistoryID, nPhotoObjectInstanceID, originalAspectRatio);
 
         // get the data for the specified material
-        var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, materialID);
+        var materialData = FormIt.MaterialProvider.GetMaterialData(FormIt.LibraryType.SKETCH, nMaterialID, true);
 
         // set the opacity
         materialData.Data.Color.a = Math.round((255 * MatchPhoto.defaultOpacityMultiplier));
@@ -407,12 +407,11 @@ MatchPhoto.paintActiveMatchPhotoObjectWithMaterial = function()
         materialData.Data.Scale.y = 2;
 
         // apply the changes to the material
-        FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, materialID, materialData.Data);
+        FormIt.MaterialProvider.SetMaterialData(FormIt.LibraryType.SKETCH, nMaterialID, materialData.Data, true);
 
         // paint the face in the camera object
-        FormIt.SketchMaterials.AssignMaterialToObjects(materialID, photoFaceObjectHistoryID);
+        FormIt.SketchMaterials.AssignMaterialToObjects(nMaterialID, nPhotoFaceObjectHistoryID);
     }
-
 }
 
 // for new match photos, need to initialize them
@@ -457,9 +456,9 @@ MatchPhoto.getIsMaterialNameValid = function(args)
 }
 
 // check if the given material name is available in the sketch
-MatchPhoto.getIsMaterialIDValid = function(materialID)
+MatchPhoto.getIsMaterialIDValid = function(nMaterialID)
 {
-    if (FormIt.MaterialProvider.GetIsMaterialValid(FormIt.LibraryType.SKETCH, materialID))
+    if (FormIt.MaterialProvider.GetIsMaterialValid(FormIt.LibraryType.SKETCH, nMaterialID))
     {
         return true;
     }
