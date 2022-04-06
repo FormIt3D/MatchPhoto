@@ -46,6 +46,28 @@ MatchPhoto.dismissActiveNotification = function()
     }
 }
 
+// create a layer for the match photo objects container
+MatchPhoto.createMatchPhotoContainerLayer = function()
+{
+    FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
+    var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
+    FormIt.Layers.SetLayerPickable(layerID, false);
+    FormIt.Layers.SetLoadInRevit(layerID, false);
+
+    return layerID;
+}
+
+// create a layer for an individual match photo object
+MatchPhoto.createMatchPhotoObjectLayer = function(matchPhotoObjectName)
+{
+    var layerName = MatchPhoto.cameraObjectLayerNamePrefix + matchPhotoObjectName;
+    FormIt.Layers.AddLayer(0, layerName, true);
+    var layerID = FormIt.Layers.GetLayerID(layerName);
+    FormIt.Layers.SetLoadInRevit(layerID, false);
+
+    return layerID;
+}
+
 // get or create the Match Photo container history ID
 MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID, stringAttributeKey, bCreateIfNotFound)
 {
@@ -73,11 +95,8 @@ MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID,
                 matchPhotoContainerInstanceID, MatchPhoto.photoObjectContainerAttributeKey, "");
 
             //put the instance on a layer and lock the layer
-            FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
-            var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
-            FormIt.Layers.SetLayerPickable(layerID, false);
-            FormIt.Layers.SetLoadInRevit(layerID, false);
-            FormIt.Layers.AssignLayerToObjects(layerID, matchPhotoContainerInstanceID);
+            var matchPhotoContainerLayerID = MatchPhoto.createMatchPhotoContainerLayer();
+            FormIt.Layers.AssignLayerToObjects(matchPhotoContainerLayerID, matchPhotoContainerInstanceID);
 
             return matchPhotoContainerHistoryID;
         }
@@ -160,11 +179,8 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
             matchPhotoObjectInstanceID, MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey, MatchPhoto.activeMatchPhotoCameraPlaneDistance);
 
         //put the instance on a layer and lock the layer
-        var layerName = MatchPhoto.cameraObjectLayerNamePrefix + MatchPhoto.activeMatchPhotoObjectName;
-        FormIt.Layers.AddLayer(0, layerName, true);
-        var layerID = FormIt.Layers.GetLayerID(layerName);
-        FormIt.Layers.SetLoadInRevit(layerID, false);
-        FormIt.Layers.AssignLayerToObjects(layerID, matchPhotoObjectPath);
+        var matchPhotoObjectLayerID = MatchPhoto.createMatchPhotoObjectLayer(MatchPhoto.activeMatchPhotoObjectName);
+        FormIt.Layers.AssignLayerToObjects(matchPhotoObjectLayerID, matchPhotoObjectPath);
     }
 }
 
@@ -208,6 +224,20 @@ MatchPhoto.getPhotoObjectInstanceID = function(nContextHistoryID, photoObjectAtt
     var cameraObjectInstanceID = aInstancesWithStringAttributeValue[0];
 
     return cameraObjectInstanceID;
+}
+
+// get the GroupInstancePath of the photo object instance
+MatchPhoto.getPhotoObjectGroupInstancePath = function(matchPhotoObjectName)
+{
+    // get the photo object container history ID
+    var matchPhotoObjectContainerHistoryID = MatchPhoto.getOrCreateMatchPhotoContainerHistoryID(MatchPhoto.photoContainerContextHistoryID, MatchPhoto.photoObjectContainerAttributeKey, true);
+
+    var matchPhotoObjectInstanceID = MatchPhoto.getPhotoObjectInstanceID(matchPhotoObjectContainerHistoryID, matchPhotoObjectName);
+
+    // create a GroupInstancePath to the match photo instance
+    var matchPhotoObjectPath = WSM.Utils.GroupInstancePathArray(matchPhotoObjectInstanceID, matchPhotoObjectContainerHistoryID);
+
+    return matchPhotoObjectPath;
 }
 
 // get the object history ID of the face that should be painted with the material
@@ -528,15 +558,33 @@ MatchPhoto.setMatchPhotoLayerVisibilityByArgs = function(args)
 
     if (bIsChecked)
     {
-        if (layerID)
+        if (layerID != 4294967295)
         {
+            FormIt.Layers.SetLayerVisibility(layerName, true);
+        }
+        else 
+        {
+            // if the layer is missing, remake it
+            var matchPhotoObjectLayerID = MatchPhoto.createMatchPhotoObjectLayer(matchPhotoObjectName);
+            // reassign the object
+            var matchPhotoObjectPath = MatchPhoto.getPhotoObjectGroupInstancePath(matchPhotoObjectName);
+            FormIt.Layers.AssignLayerToObjects(matchPhotoObjectLayerID, matchPhotoObjectPath);
             FormIt.Layers.SetLayerVisibility(layerName, true);
         }
     }
     else
     {
-        if (layerID)
+        if (layerID != 4294967295)
         {
+            FormIt.Layers.SetLayerVisibility(layerName, false);
+        }
+        else 
+        {
+            // if the layer is missing, remake it
+            var matchPhotoObjectLayerID = MatchPhoto.createMatchPhotoObjectLayer(matchPhotoObjectName);
+            // reassign the object
+            var matchPhotoObjectPath = MatchPhoto.getPhotoObjectGroupInstancePath(matchPhotoObjectName);
+            FormIt.Layers.AssignLayerToObjects(matchPhotoObjectLayerID, matchPhotoObjectPath);
             FormIt.Layers.SetLayerVisibility(layerName, false);
         }
     }
