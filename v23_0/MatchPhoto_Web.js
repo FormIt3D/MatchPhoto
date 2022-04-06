@@ -3,14 +3,16 @@ window.MatchPhoto = window.MatchPhoto || {};
 /*** web/UI code - runs natively in the plugin process ***/
 
 MatchPhoto.bIsMatchPhotoModeActive = false;
+MatchPhoto.lastUpdateTime = 0;
 MatchPhoto.defaultCameraPlaneDistance = 5; // feet
+
+// keep track of all known match photo object data in this session
+MatchPhoto.allKnownMatchPhotoObjectNames = [];
+MatchPhoto.allKnownMatchPhotoObjectLayerCheckboxModules = [];
 
 // IDs of elements that need to be referenced or modified
 MatchPhoto.inactiveMatchPhotoModeContainerID = 'inactiveMatchPhotoModeContainer';
 MatchPhoto.activeMatchPhotoModeContainerID = 'activeMatchPhotoModeContainer';
-
-MatchPhoto.layerVisibilityCheckbox = undefined;
-MatchPhoto.layerVisibilityCheckboxID = 'enableMatchPhotoCheckbox';
 
 MatchPhoto.newMatchPhotoMaterialSelectInput = undefined;
 MatchPhoto.newMatchPhotoMaterialSelectInputID = 'newMatchPhotoMaterialSelectList';
@@ -96,18 +98,9 @@ MatchPhoto.initializeUI = function()
     let manageExistingMatchPhotosSubheader = new FormIt.PluginUI.HeaderModule('Manage Existing', 'View, edit, and delete existing Match Photo objects in the current sketch.', 'headerContainer');
     inactiveMatchPhotoModeContainer.appendChild(manageExistingMatchPhotosSubheader.element);
 
-    MatchPhoto.existingMatchPhotoListContainer = new FormIt.PluginUI.ListContainer('No Match Photo objects found.');
+    MatchPhoto.existingMatchPhotoListContainer = new FormIt.PluginUI.ListContainer('No Match Photo objects found.', 350);
     MatchPhoto.existingMatchPhotoListContainer.element.id = MatchPhoto.existingMatchPhotoListContainerID;
-    MatchPhoto.existingMatchPhotoListContainer.setListHeight(300);
     inactiveMatchPhotoModeContainer.appendChild(MatchPhoto.existingMatchPhotoListContainer.element);
-
-    MatchPhoto.layerVisibilityCheckbox = new FormIt.PluginUI.CheckboxModule('Show Match Photo Objects', 'enabledCheckbox', 'multiModuleContainer', MatchPhoto.layerVisibilityCheckboxID);
-    inactiveMatchPhotoModeContainer.appendChild(MatchPhoto.layerVisibilityCheckbox.element);
-    MatchPhoto.layerVisibilityCheckbox.getInput().checked = false;
-    document.getElementById(MatchPhoto.layerVisibilityCheckboxID).onclick = function()
-    {
-        MatchPhoto.layerVisibilityCheckboxOnClick();
-    };
 
     // create a container for all the UI elements that should show
     // when Match Photo mode is active
@@ -161,13 +154,24 @@ MatchPhoto.initializeUI = function()
     document.body.appendChild(new FormIt.PluginUI.FooterModule().element);
 
     MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI();
-    MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState();
     MatchPhoto.populateExistingMatchPhotosList();
+
 }
 
 // update the UI
 MatchPhoto.updateUI = function()
 {
+    let now = new Date().getTime();
+
+    // this function is called by various FormIt messages,
+    // which could happen more often than expected
+    // so don't update if we updated within 1 second ago
+    // or if match photo mode is active
+    if (now - MatchPhoto.lastUpdateTime < 1000 || MatchPhoto.bIsMatchPhotoModeActive)
+    {
+        return;
+    }
+
     // update the dimension field with the current units
     let args = { "string" : MatchPhoto.newMatchPhotoCameraPlaneDistanceInput.getInput().value };
     window.FormItInterface.CallMethod("MatchPhoto.convertStringToLinearValue", args, function(result)
@@ -179,7 +183,9 @@ MatchPhoto.updateUI = function()
     MatchPhoto.populateExistingMatchPhotosList();
     MatchPhoto.populateSelectElementWithInSketchMaterials(MatchPhoto.newMatchPhotoMaterialSelectInput);
     MatchPhoto.populateSelectElementWithInSketchMaterials(MatchPhoto.activeMatchPhotoMaterialSelectInput);
-    MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState();
+
+    // mark the last run time
+    MatchPhoto.lastUpdateTime = new Date().getTime();
 }
 
 MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
@@ -188,7 +194,7 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
     matchPhotoListItemContainer.element.setAttribute('title', 'Click to expand and view options for this item.');
 
     // set the expandable content container height
-    matchPhotoListItemContainer.setContentContainerHeight(180);
+    matchPhotoListItemContainer.setContentContainerHeight(220);
 
     // the second (last) element is the expandable content container
     let expandableContentContainer = matchPhotoListItemContainer.element.lastChild;
@@ -222,6 +228,11 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
     let multiModuleContainer = new FormIt.PluginUI.MultiModuleContainer().element;
     expandableContentContainer.appendChild(multiModuleContainer);
 
+    // add the layer visibility toggle
+    let layerVisibilityCheckboxModule = new FormIt.PluginUI.CheckboxModule('Visible?', 'enabledCheckbox', 'multiModuleContainer', 'enabledCheckbox');
+    layerVisibilityCheckboxModule.element.firstChild.style.marginLeft = 0;
+    MatchPhoto.allKnownMatchPhotoObjectLayerCheckboxModules.push(layerVisibilityCheckboxModule);
+
     // create the manage buttons
 
     // view
@@ -231,13 +242,14 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
 
         window.FormItInterface.CallMethod("MatchPhoto.updateCameraToMatchPhotoObject", args, function(result)
         {
-            // enable the visibility of Match Photo objects
-            MatchPhoto.layerVisibilityCheckbox.getInput().checked = true;
-            MatchPhoto.layerVisibilityCheckboxOnClick();
-            
+            // enable the visibility of this match photo object
+            layerVisibilityCheckboxModule.getInput().checked = true;
+            MatchPhoto.toggleMatchPhotoLayerVisibility(layerVisibilityCheckboxModule, matchPhotoObjectName);   
         }); 
+        
     });
     viewButton.element.style.marginRight = 10;
+    viewButton.element.style.marginBottom = 5;
     multiModuleContainer.appendChild(viewButton.element);
 
     // edit
@@ -254,10 +266,15 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
            // synchronize the active Match Photo name and camera plane distance inputs with these
             MatchPhoto.activeMatchPhotoMaterialSelectInput.getInput().value = photoObjectNameInputModule.getInput().value;
             MatchPhoto.activeMatchPhotoCameraPlaneDistanceInput.getInput().value = photoObjectCameraPlaneDistanceInputModule.getInput().value;
+
+            // enable the visibility of this match photo object
+            layerVisibilityCheckboxModule.getInput().checked = true;
+            MatchPhoto.toggleMatchPhotoLayerVisibility(layerVisibilityCheckboxModule, matchPhotoObjectName);   
         }); 
 
     });
     editButton.element.style.marginRight = 10;
+    editButton.element.style.marginBottom = 5;
     multiModuleContainer.appendChild(editButton.element);
 
     // delete
@@ -273,7 +290,18 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
         }); 
     });
     deleteButton.element.style.marginRight = 10;
+    deleteButton.element.style.marginBottom = 5;
     multiModuleContainer.appendChild(deleteButton.element);
+    
+    // append and configure the visibility toggle
+    expandableContentContainer.appendChild(layerVisibilityCheckboxModule.element);
+    layerVisibilityCheckboxModule.element.firstChild.onclick = function()
+    {
+        MatchPhoto.toggleMatchPhotoLayerVisibility(layerVisibilityCheckboxModule, matchPhotoObjectName);
+    };
+
+    // set the checkbox state to match the layer state of the corresponding match photo object
+    MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState(layerVisibilityCheckboxModule, matchPhotoObjectName);
 
     return matchPhotoListItemContainer.element;
 }
@@ -306,13 +334,16 @@ MatchPhoto.populateSelectElementWithInSketchMaterials = function(selectElement)
 
 MatchPhoto.populateExistingMatchPhotosList = function()
 {
- 
     // get a list of photo object names from the FormIt side
     window.FormItInterface.CallMethod("MatchPhoto.getAllPhotoObjects", {}, function(result)
     {
         // first, clear the list if there are any items listed
         MatchPhoto.clearExistingMatchPhotosList();
 
+        // store the list of known match photo object names
+        // for other functions to access
+        MatchPhoto.allKnownMatchPhotoObjectNames = [];
+        MatchPhoto.allKnownMatchPhotoObjectLayerCheckboxModules = [];
         let parsedResult = JSON.parse(result);
 
         // for each item in the array, create a list item in the container
@@ -320,12 +351,12 @@ MatchPhoto.populateExistingMatchPhotosList = function()
         {
             let listItemElement = MatchPhoto.createExistingMatchPhotoListItem(parsedResult[i]);
             MatchPhoto.existingMatchPhotoListContainer.element.appendChild(listItemElement);
+            MatchPhoto.allKnownMatchPhotoObjectNames.push(parsedResult[i]);
         }
 
         // the list container has a zero-state message function
         // invoke this to show or hide the zero state message
         MatchPhoto.existingMatchPhotoListContainer.toggleZeroStateMessage();
-
     });
 }
 
@@ -344,31 +375,31 @@ MatchPhoto.toggleActiveOrInactiveMatchPhotoModeUI = function()
     }
 }
 
-// synchronize the visibility checkbox with the layer visibility state
-MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState = function()
+// synchronize individual visibility checkbox with the layer visibility state
+MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState = function(checkboxModule, matchPhotoObjectName)
 {
-    window.FormItInterface.CallMethod("MatchPhoto.getMatchPhotoLayerVisibilityState", { }, function(result)
+    let args = { "matchPhotoObjectName" : matchPhotoObjectName };
+
+    window.FormItInterface.CallMethod("MatchPhoto.getMatchPhotoLayerVisibilityState", args, function(result)
     {
-        MatchPhoto.layerVisibilityCheckbox.getInput().checked = JSON.parse(result);
+        checkboxModule.getInput().checked = JSON.parse(result);
     });
 }
 
-// toggle the Match Photo object layer on or off
-MatchPhoto.toggleMatchPhotoLayerVisibility = function()
+// synchronize all visibility checkboxes with the layer visibility state
+MatchPhoto.synchronizeAllMatchPhotoVisibilityCheckboxesWithLayerState = function()
 {
-    let args = { "bIsChecked" : MatchPhoto.layerVisibilityCheckbox.getInput().checked };
-
-    window.FormItInterface.CallMethod("MatchPhoto.setMatchPhotoLayerVisibilityByArgs", args, function(result)
+    for (var i = 0; i < MatchPhoto.allKnownMatchPhotoObjectNames.length; i++)
     {
-
-    });
+        MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState(MatchPhoto.allKnownMatchPhotoObjectLayerCheckboxModules[i], MatchPhoto.allKnownMatchPhotoObjectNames[i]);
+    }
 }
 
 // the function called when clicking the visibility checkbox
 // can also be invoked by other functions to simulate clicking the checkbox
-MatchPhoto.layerVisibilityCheckboxOnClick = function()
+MatchPhoto.toggleMatchPhotoLayerVisibility = function(checkboxElement, matchPhotoObjectName)
 {
-    let args = { "bIsChecked" : MatchPhoto.layerVisibilityCheckbox.getInput().checked };
+    let args = { "bIsChecked" : checkboxElement.getInput().checked, "matchPhotoObjectName" : matchPhotoObjectName };
 
     window.FormItInterface.CallMethod("MatchPhoto.setMatchPhotoLayerVisibilityByArgs", args, function(result)
     {

@@ -36,7 +36,7 @@
             // update the checkbox in the UI to match layer visibility state
             FormItInterface.SubscribeMessage("FormIt.Message.kLayerVisibilityChanged", function(msg)
             {
-                MatchPhoto.synchronizeMatchPhotoVisibilityCheckboxWithLayerState();
+                MatchPhoto.synchronizeAllMatchPhotoVisibilityCheckboxesWithLayerState();
             });
 
             // when the material manager changes (like materials are reordered or renamed),

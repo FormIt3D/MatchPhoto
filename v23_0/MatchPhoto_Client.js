@@ -26,7 +26,10 @@ MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey = 'FormIt::Plugins::MatchP
 MatchPhoto.photoObjectOriginalAspectRatioAttributeKey = 'FormIt::Plugins::MatchPhoto::PhotoObject::OriginalAspectRatio';
 
 // the layer used to store photo objects and their container - so they can be locked
-MatchPhoto.camerasContainerLayerName = 'Cameras - Match Photo';
+MatchPhoto.camerasContainerLayerName = 'Match Photo - Container';
+
+// the prefix for each match photo object layer
+MatchPhoto.cameraObjectLayerNamePrefix = 'Match Photo - ';
 
 // the default opacity multiplier (0-1) for materials used as photos
 MatchPhoto.defaultOpacityMultiplier = 0.5;
@@ -139,6 +142,9 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
 
         var matchPhotoObjectHistoryID = WSM.APIGetGroupReferencedHistoryReadOnly(matchPhotoObjectContainerHistoryID, matchPhotoObjectInstanceID);
 
+        // create a GroupInstancePath to the match photo instance
+        var matchPhotoObjectPath = WSM.Utils.GroupInstancePathArray(matchPhotoObjectInstanceID, matchPhotoObjectContainerHistoryID);
+
         // add a name for the group history
         WSM.APISetRevitFamilyInformation(matchPhotoObjectHistoryID, false, false, "", MatchPhoto.photoObjectGroupInstanceNamePrefix + MatchPhoto.activeMatchPhotoObjectName, "", "");
         // add a name for the group instance
@@ -154,10 +160,11 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
             matchPhotoObjectInstanceID, MatchPhoto.photoObjectCameraPlaneDistanceAttributeKey, MatchPhoto.activeMatchPhotoCameraPlaneDistance);
 
         //put the instance on a layer and lock the layer
-        FormIt.Layers.AddLayer(0, MatchPhoto.camerasContainerLayerName, true);
-        var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
-        FormIt.Layers.SetLayerPickable(layerID, false);
-        FormIt.Layers.AssignLayerToObjects(layerID, matchPhotoObjectInstanceID);
+        var layerName = MatchPhoto.cameraObjectLayerNamePrefix + MatchPhoto.activeMatchPhotoObjectName;
+        FormIt.Layers.AddLayer(0, layerName, true);
+        var layerID = FormIt.Layers.GetLayerID(layerName);
+        FormIt.Layers.SetLoadInRevit(layerID, false);
+        FormIt.Layers.AssignLayerToObjects(layerID, matchPhotoObjectPath);
     }
 }
 
@@ -492,9 +499,10 @@ MatchPhoto.getIsMaterialNameAlreadyUsedForMatchPhoto = function(args)
 }
 
 // get the Match Photo layer visibility state
-MatchPhoto.getMatchPhotoLayerVisibilityState = function()
+MatchPhoto.getMatchPhotoLayerVisibilityState = function(args)
 {
-    var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
+    var layerName = MatchPhoto.cameraObjectLayerNamePrefix + args.matchPhotoObjectName;
+    var layerID = FormIt.Layers.GetLayerID(layerName);
 
     // make sure the layer is not invalid (this number means it wasn't found)
     if (layerID != 4294967295)
@@ -514,21 +522,22 @@ MatchPhoto.getMatchPhotoLayerVisibilityState = function()
 MatchPhoto.setMatchPhotoLayerVisibilityByArgs = function(args)
 {
     var bIsChecked = args.bIsChecked;
-
-    var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
+    var matchPhotoObjectName = args.matchPhotoObjectName;
+    var layerName = MatchPhoto.cameraObjectLayerNamePrefix + matchPhotoObjectName;
+    var layerID = FormIt.Layers.GetLayerID(layerName);
 
     if (bIsChecked)
     {
         if (layerID)
         {
-            FormIt.Layers.SetLayerVisibility(MatchPhoto.camerasContainerLayerName, true);
+            FormIt.Layers.SetLayerVisibility(layerName, true);
         }
     }
     else
     {
         if (layerID)
         {
-            FormIt.Layers.SetLayerVisibility(MatchPhoto.camerasContainerLayerName, false);
+            FormIt.Layers.SetLayerVisibility(layerName, false);
         }
     }
 }
@@ -579,7 +588,7 @@ MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
         MatchPhoto.updateActivePhotoObjectWithCurrentCamera();
 
         MatchPhoto.dismissActiveNotification(MatchPhoto.activeNotificationHandle);
-        FormIt.UI.ShowNotification('Match Photo Mode ended.', FormIt.NotificationType.Information, 0);
+        FormIt.UI.ShowNotification('Match Photo Mode ended.', FormIt.NotificationType.Success, 0);
         
         MessagesPluginListener.listener.UnsubscribeMessage("FormIt.Message.kCameraChanged");
     }
