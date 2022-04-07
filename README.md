@@ -1,2 +1,4 @@
-# MatchPhoto
-Create a surface painted with a photo in 3D space.
+# Match Photo
+Match a photograph with the FormIt 3D scene.
+
+![Main Preview](https://formit3d.github.io/MatchPhoto/preview.png)
