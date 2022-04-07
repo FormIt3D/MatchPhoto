@@ -1,6 +1,6 @@
 {
     "PluginName": "Match Photo",
-    "PluginDescription": "Match a photo to the 3D scene.",
+    "PluginDescription": "Match a photograph with the 3D scene.",
     "PluginType": "Panel",
     "Scripts": [ 
         "PLUGINLOCATION/MatchPhoto_Client.js",
