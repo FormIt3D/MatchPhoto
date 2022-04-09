@@ -244,7 +244,6 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
         {
             // enable the visibility of this match photo object
             layerVisibilityCheckboxModule.getInput().checked = true;
-            MatchPhoto.toggleMatchPhotoLayerVisibility(layerVisibilityCheckboxModule, matchPhotoObjectName);   
         }); 
         
     });
@@ -269,7 +268,6 @@ MatchPhoto.createExistingMatchPhotoListItem = function(matchPhotoObjectName)
 
             // enable the visibility of this match photo object
             layerVisibilityCheckboxModule.getInput().checked = true;
-            MatchPhoto.toggleMatchPhotoLayerVisibility(layerVisibilityCheckboxModule, matchPhotoObjectName);   
         }); 
 
     });

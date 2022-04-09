@@ -57,6 +57,15 @@ MatchPhoto.createMatchPhotoContainerLayer = function()
     return layerID;
 }
 
+// configure the match photo container layer
+MatchPhoto.configureMatchPhotoContainerLayer = function(bLayerOn)
+{
+    var layerID = FormIt.Layers.GetLayerID(MatchPhoto.camerasContainerLayerName);
+    // get the match photo object instance
+    FormIt.Layers.SetLayerVisibility(MatchPhoto.camerasContainerLayerName, bLayerOn);
+    FormIt.Layers.SetLayerPickable(layerID, false);
+}
+
 // create a layer for an individual match photo object
 MatchPhoto.createMatchPhotoObjectLayer = function(matchPhotoObjectName)
 {
@@ -66,6 +75,17 @@ MatchPhoto.createMatchPhotoObjectLayer = function(matchPhotoObjectName)
     FormIt.Layers.SetLoadInRevit(layerID, false);
 
     return layerID;
+}
+
+// configure the match photo object layer
+MatchPhoto.configureMatchPhotoObjectLayer = function(matchPhotoObjectName, bLayerOn)
+{
+    var layerName = MatchPhoto.cameraObjectLayerNamePrefix + matchPhotoObjectName;
+    var matchPhotoObjectLayerID = MatchPhoto.createMatchPhotoObjectLayer(matchPhotoObjectName);
+    // reassign the object
+    var matchPhotoObjectPath = MatchPhoto.getPhotoObjectGroupInstancePath(matchPhotoObjectName);
+    FormIt.Layers.AssignLayerToObjects(matchPhotoObjectLayerID, matchPhotoObjectPath);
+    FormIt.Layers.SetLayerVisibility(layerName, bLayerOn);
 }
 
 // get or create the Match Photo container history ID
@@ -198,6 +218,10 @@ MatchPhoto.updateCameraToMatchPhotoObject = function(args)
 
     // get the camera data from the photo object
     var cameraData = ManageCameras.getCameraDataFromCameraObjectAttribute(nContextHistoryID, nMatchPhotoObjectInstanceID);
+
+    // configure the container and object layer
+    MatchPhoto.configureMatchPhotoContainerLayer(true);
+    MatchPhoto.configureMatchPhotoObjectLayer(matchPhotoObjectName, true);
 
     // set the camera to match the camera data
     FormIt.Cameras.SetCameraData(cameraData);
@@ -565,11 +589,7 @@ MatchPhoto.setMatchPhotoLayerVisibilityByArgs = function(args)
         else 
         {
             // if the layer is missing, remake it
-            var matchPhotoObjectLayerID = MatchPhoto.createMatchPhotoObjectLayer(matchPhotoObjectName);
-            // reassign the object
-            var matchPhotoObjectPath = MatchPhoto.getPhotoObjectGroupInstancePath(matchPhotoObjectName);
-            FormIt.Layers.AssignLayerToObjects(matchPhotoObjectLayerID, matchPhotoObjectPath);
-            FormIt.Layers.SetLayerVisibility(layerName, true);
+            MatchPhoto.configureMatchPhotoObjectLayer(matchPhotoObjectName, true);
         }
     }
     else
@@ -581,11 +601,7 @@ MatchPhoto.setMatchPhotoLayerVisibilityByArgs = function(args)
         else 
         {
             // if the layer is missing, remake it
-            var matchPhotoObjectLayerID = MatchPhoto.createMatchPhotoObjectLayer(matchPhotoObjectName);
-            // reassign the object
-            var matchPhotoObjectPath = MatchPhoto.getPhotoObjectGroupInstancePath(matchPhotoObjectName);
-            FormIt.Layers.AssignLayerToObjects(matchPhotoObjectLayerID, matchPhotoObjectPath);
-            FormIt.Layers.SetLayerVisibility(layerName, false);
+            MatchPhoto.configureMatchPhotoObjectLayer(matchPhotoObjectName, false);
         }
     }
 }
@@ -628,6 +644,9 @@ MatchPhoto.toggleSubscribeToCameraChangedMessage = function(args)
 
         MatchPhoto.dismissActiveNotification(MatchPhoto.activeNotificationHandle);
         MatchPhoto.activeNotificationHandle = FormIt.UI.ShowNotification('Match Photo Mode active.', FormIt.NotificationType.Information, 0);
+
+        // ensure the match photo container layer is configured and visible
+        MatchPhoto.configureMatchPhotoContainerLayer(true);
 
         MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera();
     }
