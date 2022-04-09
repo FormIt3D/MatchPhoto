@@ -346,6 +346,9 @@ MatchPhoto.populateExistingMatchPhotosList = function()
         MatchPhoto.allKnownMatchPhotoObjectLayerCheckboxModules = [];
         let parsedResult = JSON.parse(result);
 
+        // sort the results alphabetically
+        parsedResult.sort();
+
         // for each item in the array, create a list item in the container
         for (var i = 0; i < parsedResult.length; i++)
         {
