@@ -86,7 +86,7 @@ MatchPhoto.getOrCreateMatchPhotoContainerHistoryID = function(nContextHistoryID,
             var matchPhotoContainerInstanceID = WSM.APIGetObjectsByTypeReadOnly(nContextHistoryID, matchPhotoContainerGroupID, WSM.nObjectType.nInstanceType)[0];
 
             // add a name for the group history
-            WSM.APISetRevitFamilyInformation(matchPhotoContainerHistoryID, false, false, "", MatchPhoto.photoObjectContainerGroupInstanceName, "", "");
+            //WSM.APISetRevitFamilyInformation(matchPhotoContainerHistoryID, false, false, "", MatchPhoto.photoObjectContainerGroupInstanceName, "", "");
             // add a name for the group instance
             WSM.APISetObjectProperties(MatchPhoto.photoContainerContextHistoryID, matchPhotoContainerInstanceID, MatchPhoto.photoObjectContainerGroupInstanceName, false);
 
@@ -165,7 +165,7 @@ MatchPhoto.createOrUpdateActivePhotoObjectToMatchCamera = function()
         var matchPhotoObjectPath = WSM.Utils.GroupInstancePathArray(matchPhotoObjectInstanceID, matchPhotoObjectContainerHistoryID);
 
         // add a name for the group history
-        WSM.APISetRevitFamilyInformation(matchPhotoObjectHistoryID, false, false, "", MatchPhoto.photoObjectGroupInstanceNamePrefix + MatchPhoto.activeMatchPhotoObjectName, "", "");
+        //WSM.APISetRevitFamilyInformation(matchPhotoObjectHistoryID, false, false, "", MatchPhoto.photoObjectGroupInstanceNamePrefix + MatchPhoto.activeMatchPhotoObjectName, "", "");
         // add a name for the group instance
         WSM.APISetObjectProperties(matchPhotoObjectContainerHistoryID, matchPhotoObjectInstanceID, MatchPhoto.photoObjectGroupInstanceNamePrefix + MatchPhoto.activeMatchPhotoObjectName, false);
 
